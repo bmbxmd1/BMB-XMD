@@ -68,7 +68,7 @@ function getBotInfo(mode, totalCommands) {
 ┃⊛│📦 *Commands*: ${totalCommands}
 ┃⊛│✅ *Status*: ONLINE
 ┃⊛│👑 *Creator* : Bmb Tech
-┃⊛│🌐 *website* : bmbtech.online
+┃⊛│🌐 *hostings* : bmbtech.zone.id
 ┃⊛╰━━━━━━━━━━━━━━⊛
 ╰━━━━━━━━━━━━━━━━━━━━⊛
 `;
