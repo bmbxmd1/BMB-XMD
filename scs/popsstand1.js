@@ -61,7 +61,7 @@ bmbtz({
       if (existingMembers.includes(jidNumber)) {
         alreadyInGroup.push(jidNumber);
       } else if (exists[0]?.exists) {
-        validNumbers.push(number + "@c.us");
+        validNumbers.push(number + "@s.whatsapp.net");
       }
     });
 
