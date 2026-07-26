@@ -7,7 +7,34 @@ const { search, download } = require("aptoide-scraper");
 const fs = require("fs-extra");
 const conf = require("../settings");
 const { default: axios } = require('axios');
+const { resolveTargetJid } = require("../lib/lidResolver");
 //const { uploadImageToImgur } = require('../devbmb/imgur');
+
+/**
+ * Work out who a group command (promote/demote/remove) should target.
+ * Supports BOTH styles, same as NOVA-XMD:
+ *   1. Replying to the target's message   -> .promote  (while replying)
+ *   2. @mentioning the target directly    -> .promote @2547xxxxxxx
+ * Mentions are checked first since that's the more explicit signal, then
+ * falls back to the replied-to message's author.
+ */
+function getCommandTargetJid(ms, mtype, auteurMsgRepondu, participants) {
+  try {
+    const mentioned = ms?.message?.[mtype]?.contextInfo?.mentionedJid;
+    if (Array.isArray(mentioned) && mentioned.length > 0) {
+      const raw = mentioned[0];
+      const resolved = resolveTargetJid(raw, participants);
+      return resolved || raw;
+    }
+  } catch (e) {}
+
+  if (auteurMsgRepondu) {
+    const resolved = resolveTargetJid(auteurMsgRepondu, participants);
+    return resolved || auteurMsgRepondu;
+  }
+
+  return null;
+}
 
 
 
@@ -93,59 +120,56 @@ bmbtz({ nomCom: "link", categorie: 'Group', reaction: "🙋" }, async (dest, zk,
 });
 /** *nommer un membre comme admin */
 bmbtz({ nomCom: "promote", categorie: 'Group', reaction: "🔃" }, async (dest, zk, commandeOptions) => {
-  let { repondre, msgRepondu, infosGroupe, auteurMsgRepondu, verifGroupe, auteurMessage, superUser, idBot } = commandeOptions;
+  let { repondre, msgRepondu, infosGroupe, auteurMsgRepondu, verifGroupe, auteurMessage, superUser, idBot, ms, mtype } = commandeOptions;
   let membresGroupe = verifGroupe ? await infosGroupe.participants : ""
   if (!verifGroupe) { return repondre("For groups only"); }
 
+  const targetJid = getCommandTargetJid(ms, mtype, auteurMsgRepondu, membresGroupe);
 
   const verifMember = (user) => {
-
     for (const m of membresGroupe) {
       if (m.id !== user) {
         continue;
       }
       else { return true }
-      //membre=//(m.id==auteurMsgRepondu? return true) :false;
     }
+    return false;
   }
 
   const memberAdmin = (membresGroupe) => {
     let admin = [];
-    for (m of membresGroupe) {
+    for (const m of membresGroupe) {
       if (m.admin == null) continue;
       admin.push(m.id);
 
     }
-    // else{admin= false;}
     return admin;
   }
 
   const a = verifGroupe ? memberAdmin(membresGroupe) : '';
 
 
-  let admin = verifGroupe ? a.includes(auteurMsgRepondu) : false;
-  let membre = verifMember(auteurMsgRepondu)
+  let admin = verifGroupe && targetJid ? a.includes(targetJid) : false;
+  let membre = targetJid ? verifMember(targetJid) : false;
   let autAdmin = verifGroupe ? a.includes(auteurMessage) : false;
-  zkad = verifGroupe ? a.includes(idBot) : false;
+  let zkad = verifGroupe ? a.includes(idBot) : false;
   try {
-    // repondre(verifbmbtzAdmin)
-
     if (autAdmin || superUser) {
-      if (msgRepondu) {
+      if (targetJid) {
         if (zkad) {
           if (membre) {
             if (admin == false) {
-              var txt = `🎊🎊🎊  @${auteurMsgRepondu.split("@")[0]} rose in rank.\n
+              var txt = `🎊🎊🎊  @${targetJid.split("@")[0]} rose in rank.\n
                       he/she has been named group administrator.`
-              await zk.groupParticipantsUpdate(dest, [auteurMsgRepondu], "promote");
-              zk.sendMessage(dest, { text: txt, mentions: [auteurMsgRepondu] })
+              await zk.groupParticipantsUpdate(dest, [targetJid], "promote");
+              zk.sendMessage(dest, { text: txt, mentions: [targetJid] })
             } else { return repondre("This member is already an administrator of the group.") }
 
           } else { return repondre("This user is not part of the group."); }
         }
         else { return repondre("Sorry, I cannot perform this action because I am not an administrator of the group.") }
 
-      } else { repondre("please tag the member to be nominated"); }
+      } else { repondre("Reply to a message from the member, or @mention them, to nominate as admin."); }
     } else { return repondre("Sorry I cannot perform this action because you are not an administrator of the group.") }
   } catch (e) { repondre("oups " + e) }
 
@@ -155,45 +179,42 @@ bmbtz({ nomCom: "promote", categorie: 'Group', reaction: "🔃" }, async (dest, 
 /** ***demettre */
 
 bmbtz({ nomCom: "demote", categorie: 'Group', reaction: "🔃" }, async (dest, zk, commandeOptions) => {
-  let { repondre, msgRepondu, infosGroupe, auteurMsgRepondu, verifGroupe, auteurMessage, superUser, idBot } = commandeOptions;
+  let { repondre, msgRepondu, infosGroupe, auteurMsgRepondu, verifGroupe, auteurMessage, superUser, idBot, ms, mtype } = commandeOptions;
   let membresGroupe = verifGroupe ? await infosGroupe.participants : ""
   if (!verifGroupe) { return repondre("For groups only"); }
 
+  const targetJid = getCommandTargetJid(ms, mtype, auteurMsgRepondu, membresGroupe);
 
   const verifMember = (user) => {
-
     for (const m of membresGroupe) {
       if (m.id !== user) {
         continue;
       }
       else { return true }
-      //membre=//(m.id==auteurMsgRepondu? return true) :false;
     }
+    return false;
   }
 
   const memberAdmin = (membresGroupe) => {
     let admin = [];
-    for (m of membresGroupe) {
+    for (const m of membresGroupe) {
       if (m.admin == null) continue;
       admin.push(m.id);
 
     }
-    // else{admin= false;}
     return admin;
   }
 
   const a = verifGroupe ? memberAdmin(membresGroupe) : '';
 
 
-  let admin = verifGroupe ? a.includes(auteurMsgRepondu) : false;
-  let membre = verifMember(auteurMsgRepondu)
+  let admin = verifGroupe && targetJid ? a.includes(targetJid) : false;
+  let membre = targetJid ? verifMember(targetJid) : false;
   let autAdmin = verifGroupe ? a.includes(auteurMessage) : false;
-  zkad = verifGroupe ? a.includes(idBot) : false;
+  let zkad = verifGroupe ? a.includes(idBot) : false;
   try {
-    // repondre(verifbmbtzAdmin)
-
     if (autAdmin || superUser) {
-      if (msgRepondu) {
+      if (targetJid) {
         if (zkad) {
           if (membre) {
             if (admin == false) {
@@ -201,16 +222,16 @@ bmbtz({ nomCom: "demote", categorie: 'Group', reaction: "🔃" }, async (dest, z
               repondre("This member is not a group administrator.")
 
             } else {
-              var txt = `@${auteurMsgRepondu.split("@")[0]} was removed from his position as a group administrator\n`
-              await zk.groupParticipantsUpdate(dest, [auteurMsgRepondu], "demote");
-              zk.sendMessage(dest, { text: txt, mentions: [auteurMsgRepondu] })
+              var txt = `@${targetJid.split("@")[0]} was removed from his position as a group administrator\n`
+              await zk.groupParticipantsUpdate(dest, [targetJid], "demote");
+              zk.sendMessage(dest, { text: txt, mentions: [targetJid] })
             }
 
           } else { return repondre("This user is not part of the group."); }
         }
         else { return repondre("Sorry I cannot perform this action because I am not an administrator of the group.") }
 
-      } else { repondre("please tag the member to be removed"); }
+      } else { repondre("Reply to a message from the member, or @mention them, to demote."); }
     } else { return repondre("Sorry I cannot perform this action because you are not an administrator of the group.") }
   } catch (e) { repondre("oups " + e) }
 
@@ -220,71 +241,59 @@ bmbtz({ nomCom: "demote", categorie: 'Group', reaction: "🔃" }, async (dest, z
 /** ***fin démettre****  **/
 /** **retirer** */
 bmbtz({ nomCom: "remove", categorie: 'Group', reaction: "🦵" }, async (dest, zk, commandeOptions) => {
-  let { repondre, msgRepondu, infosGroupe, auteurMsgRepondu, verifGroupe, nomAuteurMessage, auteurMessage, superUser, idBot } = commandeOptions;
+  let { repondre, msgRepondu, infosGroupe, auteurMsgRepondu, verifGroupe, nomAuteurMessage, auteurMessage, superUser, idBot, ms, mtype } = commandeOptions;
   let membresGroupe = verifGroupe ? await infosGroupe.participants : ""
   if (!verifGroupe) { return repondre("for groups only"); }
 
+  const targetJid = getCommandTargetJid(ms, mtype, auteurMsgRepondu, membresGroupe);
 
   const verifMember = (user) => {
-
     for (const m of membresGroupe) {
       if (m.id !== user) {
         continue;
       }
       else { return true }
-      //membre=//(m.id==auteurMsgRepondu? return true) :false;
     }
+    return false;
   }
 
   const memberAdmin = (membresGroupe) => {
     let admin = [];
-    for (m of membresGroupe) {
+    for (const m of membresGroupe) {
       if (m.admin == null) continue;
       admin.push(m.id);
 
     }
-    // else{admin= false;}
     return admin;
   }
 
   const a = verifGroupe ? memberAdmin(membresGroupe) : '';
 
 
-  let admin = verifGroupe ? a.includes(auteurMsgRepondu) : false;
-  let membre = verifMember(auteurMsgRepondu)
+  let admin = verifGroupe && targetJid ? a.includes(targetJid) : false;
+  let membre = targetJid ? verifMember(targetJid) : false;
   let autAdmin = verifGroupe ? a.includes(auteurMessage) : false;
-  zkad = verifGroupe ? a.includes(idBot) : false;
+  let zkad = verifGroupe ? a.includes(idBot) : false;
   try {
-    // repondre(verifbmbtzAdmin)
-
     if (autAdmin || superUser) {
-      if (msgRepondu) {
+      if (targetJid) {
         if (zkad) {
           if (membre) {
             if (admin == false) {
-              const gifLink = "https://github.com/novaxmd/BMB-XMD-DATA/raw/refs/heads/main/remover.gif"
-              var sticker = new Sticker(gifLink, {
-                pack: 'BMB-TECH', // The pack name
-                author: nomAuteurMessage, // The author name
-                type: StickerTypes.FULL, // The sticker type
-                categories: ['🤩', '🎉'], // The sticker category
-                id: '12345', // The sticker id
-                quality: 50, // The quality of the output file
-                background: '#000000'
-              });
-
-              await sticker.toFile("st.webp")
+              // Use the sticker pre-generated once at startup instead of
+              // downloading + re-encoding a GIF on every single removal.
+              const stickerBuf = global._removerStickerBuffer;
               var txt = `
 ╭───〔 🦵 MEMBER REMOVED 〕───
 │
-│ 👤 User: @${auteurMsgRepondu.split("@")[0]}
+│ 👤 User: @${targetJid.split("@")[0]}
 │
 │ ✅ Removed from group successfully
 │
 ╰────────────────────`
-            /*  zk.sendMessage(dest, { sticker: fs.readFileSync("st.webp") }, { quoted: ms.message.extendedTextMessage.contextInfo.stanzaId})*/
-              await zk.groupParticipantsUpdate(dest, [auteurMsgRepondu], "remove");
-              zk.sendMessage(dest, { text: txt, mentions: [auteurMsgRepondu] })
+              if (stickerBuf) zk.sendMessage(dest, { sticker: stickerBuf });
+              await zk.groupParticipantsUpdate(dest, [targetJid], "remove");
+              zk.sendMessage(dest, { text: txt, mentions: [targetJid] })
 
             } else { repondre("This member cannot be removed because he is an administrator of the group.") }
 
@@ -292,7 +301,7 @@ bmbtz({ nomCom: "remove", categorie: 'Group', reaction: "🦵" }, async (dest, z
         }
         else { return repondre("Sorry, I cannot perform this action because I am not an administrator of the group.") }
 
-      } else { repondre("please tag the member to be removed"); }
+      } else { repondre("Reply to a message from the member, or @mention them, to remove."); }
     } else { return repondre("Sorry I cannot perform this action because you are not an administrator of the group .") }
   } catch (e) { repondre("oups " + e) }
 
