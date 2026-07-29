@@ -62,14 +62,14 @@ function getBotInfo(mode, totalCommands) {
 
   return `
 ╭───「 *B.M.B-TECH* 」─────⊛
-┃⊛╭───────────────⊛
-┃⊛│☢️ *Mode*: ${mode.toUpperCase()}
-┃⊛│🖥️ *RAM*: ${usedRAM} / ${totalRAM}
-┃⊛│📦 *Commands*: ${totalCommands}
-┃⊛│✅ *Status*: ONLINE
-┃⊛│👑 *Creator* : Bmb Tech
-┃⊛│🌐 *hostings* : bmbtech.zone.id
-┃⊛╰━━━━━━━━━━━━━━⊛
+┃➠╭───────────────⊛
+┃➠│☢️ *Mode*: ${mode.toUpperCase()}
+┃➠│🖥️ *RAM*: ${usedRAM} / ${totalRAM}
+┃➠│📦 *Commands*: ${totalCommands}
+┃➠│✅ *Status*: ONLINE
+┃➠│👑 *Creator* : Bmb Tech
+┃➠│🌐 *hostings* : bmbtech.zone.id
+┃➠╰━━━━━━━━━━━━━━⊛
 ╰━━━━━━━━━━━━━━━━━━━━⊛
 `;
 }
@@ -103,7 +103,7 @@ bmbtz({
   optionsText += `Reply with category number:\n\n`;
   
   categories.forEach((cat, index) => {
-    optionsText += `${index + 1} ➠ ${cat.toUpperCase()}\n`;
+    optionsText += `${index + 1} © ${cat.toUpperCase()}\n`;
   });
   
   optionsText += `\n*Send number (1-${categories.length})*`;
