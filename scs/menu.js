@@ -61,7 +61,7 @@ function getBotInfo(mode, totalCommands) {
   const totalRAM = format(os.totalmem());
 
   return `
-╭───「 *B.M.B-TECH* 」─────⊛
+╭───「 *B.M.B-TECH* 」───⊛
 ┃➠╭───────────────⊛
 ┃➠│☢️ *Mode*: ${mode.toUpperCase()}
 ┃➠│🖥️ *RAM*: ${usedRAM} / ${totalRAM}
@@ -70,7 +70,7 @@ function getBotInfo(mode, totalCommands) {
 ┃➠│👑 *Creator* : Bmb Tech
 ┃➠│🌐 *hostings* : bmbtech.zone.id
 ┃➠╰━━━━━━━━━━━━━━⊛
-╰━━━━━━━━━━━━━━━━━━━━⊛
+╰━━━━━━━━━━━━━━━━⊛
 `;
 }
 
@@ -99,11 +99,11 @@ bmbtz({
   const imagePath = getRandomScsImage();
   
   // ====== BUILD OPTIONS TEXT ======
-  let optionsText = `📑 *BMB TOOL MENU*\n\n`;
+  let optionsText = `📋 *BMB TOOL MENU*\n\n`;
   optionsText += `Reply with category number:\n\n`;
   
   categories.forEach((cat, index) => {
-    optionsText += `${index + 1} © ${cat.toUpperCase()}\n`;
+    optionsText += `${index + 1} ➠ ${cat.toUpperCase()}\n`;
   });
   
   optionsText += `\n*Send number (1-${categories.length})*`;
