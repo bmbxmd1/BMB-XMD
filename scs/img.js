@@ -41,24 +41,28 @@ bmbtz({
   const searchTerm = arg.join(" ");
 
   try {
-    const apiUrl = `https://api.gifted.co.ke/api/search/googleimage?apikey=gifted&query=${encodeURIComponent(searchTerm)}`;
-    const { data } = await axios.get(apiUrl);
+    const apiUrl = `https://api-library-kohi.onrender.com/api/gmage?q=${encodeURIComponent(searchTerm)}`;
+    const { data } = await axios.get(apiUrl, { timeout: 15000 });
 
-    if (!data || !data.success || !data.results || data.results.length === 0) {
+    if (!data || !data.status || !Array.isArray(data.data) || data.data.length === 0) {
       return repondre('❌ No images found for your query.');
     }
 
-    const results = data.results;
+    const results = data.data;
     // Send up to 5 images
     const sendCount = Math.min(results.length, 5);
     for (let i = 0; i < sendCount; i++) {
-      await zk.sendMessage(dest, {
-        image: { url: results[i] },
-        contextInfo
-      }, { quoted: ms });
+      try {
+        await zk.sendMessage(dest, {
+          image: { url: results[i] },
+          contextInfo
+        }, { quoted: ms });
+      } catch (sendErr) {
+        console.error('Failed to send image', i, sendErr.message);
+      }
     }
   } catch (err) {
-    console.error(err);
+    console.error(err.response?.data || err.message);
     return repondre('❌ An error occurred while searching for images.');
   }
 });
