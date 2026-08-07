@@ -21,7 +21,7 @@
   "license": "ISC",
   "dependencies": {
     "@hapi/boom": "^10.0.1",
-    "@whiskeysockets/baileys": "npm:bmbxmd-baileys@^1.0.0",
+    "@whiskeysockets/baileys": "npm:bmbxmd-baileys@^1.0.1",
     "@xaviabot/fb-downloader": "^1.0.14",
     "aptoide-scraper": "^1.0.1",
     "axios": "^1.4.0",
