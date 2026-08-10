@@ -5,7 +5,7 @@ const { downloadMediaMessage,downloadContentFromMessage } =  require('@whiskeyso
 const fs =require("fs-extra") ;
 const axios = require('axios');  
 const FormData = require('form-data');
-const { exec } = require("child_process");
+const { execFile } = require("child_process");
 
 
 
@@ -189,7 +189,7 @@ bmbtz({ nomCom: "write", categorie: "Conversion", reaction: "☘️" }, async (o
   data.append('image', fs.createReadStream(image));
 
   //Configure headers
-  const clientId = 'b40a1820d63cd4e'; // Replace with your Imgur client ID
+  const clientId = process.env.IMGUR_CLIENT_ID;
   const headers = {
     'Authorization': `Client-ID ${clientId}`,
     ...data.getHeaders()
@@ -255,7 +255,7 @@ bmbtz({nomCom:"photo",categorie: "Conversion", reaction: "☘️"},async(dest,zk
   let ran = await alea(".png");
 
   
-        exec(`ffmpeg -i ${mediaMess} ${ran}`, (err) => {
+        execFile('ffmpeg', ['-i', mediaMess, ran], (err) => {
           fs.unlinkSync(mediaMess);
           if (err) {
             zk.sendMessage(
@@ -292,7 +292,7 @@ async (dest, zk, commandeOptions) => {
   }
 
   const gifSearchTerm = arg.join(" ");
-  const tenorApiKey = "AIzaSyCyouca1_KKy4W_MG1xsPzuku5oa8W358c"; // Remplacez par votre clé d'API Tenor
+  const tenorApiKey = process.env.TENOR_API_KEY;
 
   try { for ( i = 0 ; i < 5 ; i++) {
     const gif = await axios.get(
