@@ -44,35 +44,40 @@ bmbtz({
   try {
     await client.sendMessage(dest, { react: { text: "⏳", key: ms.key } });
 
-    const apiUrl = `https://delirius-apiofc.vercel.app/download/tiktok?url=${encodeURIComponent(q)}`;
+    const apiUrl = `https://bmb-api.zone.id/api/tiktok/download?url=${encodeURIComponent(q)}`;
     const { data } = await axios.get(apiUrl);
 
-    if (!data.status || !data.data) return repondre("⚠️ Failed to fetch TikTok video.");
+    if (!data.success || !data.data || !data.data.status) {
+      return repondre("⚠️ Failed to fetch TikTok video.");
+    }
 
-    const { title, like, comment, share, author, meta } = data.data;
-    const videoMedia = meta?.media?.find(v => v.type === "video");
-    if (!videoMedia) return repondre("⚠️ Video not found in response.");
+    const { title, thumbnail, downloads } = data.data;
+
+    if (!downloads || !downloads.length) {
+      return repondre("⚠️ Video not found in response.");
+    }
+
+    const noWmDownload = downloads.find(d => d.text === "Without watermark");
+    if (!noWmDownload || !noWmDownload.url) return repondre("⚠️ Video download link not found in response.");
+
+    const videoUrl = noWmDownload.url;
 
     const caption =
       "╔══════════════════❒\n" +
       `║ 🎵 *TikTok Video*\n` +
       `║\n` +
-      `║ 👤 *User:* ${author.nickname} (@${author.username})\n` +
-      `║ 📖 *Title:* ${title}\n` +
-      `║ 👍 *Likes:* ${like}\n` +
-      `║ 💬 *Comments:* ${comment}\n` +
-      `║ 🔁 *Shares:* ${share}\n` +
+      `║ 📖 *Title:* ${title || "N/A"}\n` +
       "╚══════════════════❒";
 
-    // 1. Send caption only (no image or video)
+    // 1. Send caption only
     await client.sendMessage(dest, {
       text: caption,
       ...newsletterContext
     }, { quoted: quotedContact });
 
-    // 2. Send video only (no caption)
+    // 2. Send video only
     await client.sendMessage(dest, {
-      video: { url: videoMedia.org },
+      video: { url: videoUrl },
       ...newsletterContext
     }, { quoted: quotedContact });
 
