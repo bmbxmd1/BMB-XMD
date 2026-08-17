@@ -2,8 +2,6 @@ const { bmbtz } = require("../../devbmb/bmbtz");
 const axios = require('axios');
 const yts = require('yt-search');
 
-const BASE_URL = 'https://noobs-api.top';
-
 const BOT_NAME = 'B.M.B-TECH'; // Change as you want
 const NEWSLETTER_JID = '120363382023564830@newsletter';
 const NEWSLETTER_NAME = 'Bmb Tech Info';
@@ -22,6 +20,7 @@ const buildCaption = (type, video) => {
     `🔗 ${video.url}`
   );
 };
+
 // getContextInfo now takes query and botName, and includes body and title
 const getContextInfo = (query = '', botName = BOT_NAME) => ({
   forwardingScore: 1,
@@ -31,10 +30,9 @@ const getContextInfo = (query = '', botName = BOT_NAME) => ({
     newsletterName: NEWSLETTER_NAME,
     serverMessageId: -1
   },
-  // Added fields as requested
   body: query ? `Requested song: ${query}` : undefined,
   title: botName
-}); 
+});
 
 const buildDownloadingCaption = () => (
   `*${BOT_NAME}*\n\n` +
@@ -66,20 +64,23 @@ bmbtz(
         );
 
       const safeTitle = video.title.replace(/[\\/:*?"<>|]/g, '');
-      const fileName = `${safeTitle}.mp3`;
-      const apiURL = `${BASE_URL}/dipto/ytDl3?link=${encodeURIComponent(video.videoId)}&format=mp3`;
 
-      const response = await axios.get(apiURL);
+      const response = await axios.get('https://apiziaul.vercel.app/api/downloader/ytplaymp3', {
+        params: { query }
+      });
       const data = response.data;
 
-      if (!data.downloadLink)
+      if (!data.status || !data.result || !data.result.downloadUrl)
         return client.sendMessage(
           origineMessage,
           { text: 'Failed to retrieve the MP3 download link.', contextInfo: getContextInfo() },
           { quoted: ms }
         );
 
-// Send caption with thumbnail first, ensure renderSmallThumbnail: true
+      const downloadUrl = data.result.downloadUrl;
+      const fileName = `${data.result.title || safeTitle}.mp3`;
+
+      // Send caption with thumbnail first
       await client.sendMessage(
         origineMessage,
         {
@@ -100,17 +101,17 @@ bmbtz(
         { quoted: ms }
       );
 
-      // Send mp3 with body and title, and include image with renderSmallThumbnail
+      // Send mp3
       await client.sendMessage(
         origineMessage,
         {
-          audio: { url: data.downloadLink },
+          audio: { url: downloadUrl },
           mimetype: 'audio/mpeg',
           fileName,
           title: BOT_NAME,
           body: `Requested song :${query}`,
-          image: { url: video.thumbnail, renderSmallThumbnail: true }, 
-          contextInfo: getContextInfo() 
+          image: { url: video.thumbnail, renderSmallThumbnail: true },
+          contextInfo: getContextInfo()
         },
         { quoted: ms }
       );
@@ -151,18 +152,21 @@ bmbtz(
         );
 
       const safeTitle = video.title.replace(/[\\/:*?"<>|]/g, '');
-      const fileName = `${safeTitle}.mp3`;
-      const apiURL = `${BASE_URL}/dipto/ytDl3?link=${encodeURIComponent(video.videoId)}&format=mp3`;
 
-      const response = await axios.get(apiURL);
+      const response = await axios.get('https://apiziaul.vercel.app/api/downloader/ytplaymp3', {
+        params: { query }
+      });
       const data = response.data;
 
-      if (!data.downloadLink)
+      if (!data.status || !data.result || !data.result.downloadUrl)
         return client.sendMessage(
           origineMessage,
           { text: 'Failed to retrieve the MP3 download link.', contextInfo: getContextInfo() },
           { quoted: ms }
         );
+
+      const downloadUrl = data.result.downloadUrl;
+      const fileName = `${data.result.title || safeTitle}.mp3`;
 
       // Send caption with thumbnail first
       await client.sendMessage(
@@ -189,7 +193,7 @@ bmbtz(
       await client.sendMessage(
         origineMessage,
         {
-          document: { url: data.downloadLink },
+          document: { url: downloadUrl },
           mimetype: 'audio/mpeg',
           fileName
         },
@@ -232,18 +236,22 @@ bmbtz(
         );
 
       const safeTitle = video.title.replace(/[\\/:*?"<>|]/g, '');
-      const fileName = `${safeTitle}.mp4`;
-      const apiURL = `${BASE_URL}/dipto/ytDl3?link=${encodeURIComponent(video.videoId)}&format=mp4`;
 
-      const response = await axios.get(apiURL);
+      // NEW API — video (takes the YouTube URL, not a search query)
+      const response = await axios.get('https://apiziaul.vercel.app/api/downloader/ytmp4', {
+        params: { url: video.url }
+      });
       const data = response.data;
 
-      if (!data.downloadLink)
+      if (!data.status || !data.result || !data.result.downloadUrl)
         return client.sendMessage(
           origineMessage,
           { text: 'Failed to retrieve the MP4 download link.', contextInfo: getContextInfo() },
           { quoted: ms }
         );
+
+      const downloadUrl = data.result.downloadUrl;
+      const fileName = `${data.result.title || data.result.filename || safeTitle}.mp4`;
 
       // Send caption with thumbnail first
       await client.sendMessage(
@@ -270,7 +278,7 @@ bmbtz(
       await client.sendMessage(
         origineMessage,
         {
-          video: { url: data.downloadLink },
+          video: { url: downloadUrl },
           mimetype: 'video/mp4',
           fileName
         },
@@ -286,4 +294,4 @@ bmbtz(
       );
     }
   }
-); 
+);
