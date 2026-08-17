@@ -78,7 +78,7 @@ async function refreshSudoCache() {
 }
 refreshSudoCache();
 setInterval(refreshSudoCache, 30000);
-var session = conf.session.replace(/B.M.B-TECH;;;;/g,"");
+var session = conf.session.replace(/BMB-TECH~/g,"");
 const prefixe = conf.PREFIXE;
 const more = String.fromCharCode(8206)
 const readmore = more.repeat(4001)
