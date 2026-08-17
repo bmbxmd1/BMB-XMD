@@ -1,0 +1,42 @@
+{
+  "name": "BMB-TECH",
+  "description": "ʙᴇsᴛ ᴡʜᴀᴛsᴀᴘᴘ ʙᴏᴛ ᴅᴇᴠᴇʟᴏᴘᴇᴅ ʙʏ ʙᴍʙ ᴛᴇᴄʜ 🇹🇿",
+  "keywords": ["bot", "node", "baileys", "whatsapp"],
+  "logo": "https://url.bmbxmd.workers.dev/menubmb.png",
+  "repository": "https://github.com/Dev-bmbtech/BMB-TECH",
+  "succes_url": "/",
+  "stack": "heroku-24",
+  "env": {
+    "SESSION_ID": {
+      "description": "Your session ID — the code you receive after scanning the QR code / pairing.",
+      "value": "",
+      "required": true
+    },
+    "NUMERO_OWNER": {
+      "description": "Your WhatsApp number with country code, no '+' (example for Tanzania: 255XXXXXXXXX).",
+      "value": "",
+      "required": true
+    },
+    "OWNER_NAME": {
+      "description": "Your name, shown in bot messages.",
+      "value": "𝙱.𝙼.𝙱-𝚇𝙼𝙳",
+      "required": false
+    },
+    "PREFIX": {
+      "description": "Command prefix (can also be changed later with .setprefix).",
+      "value": ".",
+      "required": false
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ]
+}
