@@ -1,8 +1,7 @@
 const { bmbtz } = require("../../devbmb/bmbtz");
 const axios = require("axios");
 
-const YT_API = "https://iamtkm.vercel.app/downloaders/ytmp3";
-const API_KEY = "tkm";
+const YT_API = "https://apiziaul.vercel.app/api/downloader/ytmp3";
 
 /* ===== Newsletter context ===== */
 const contextInfo = {
@@ -38,19 +37,19 @@ bmbtz({
     await client.sendMessage(dest, { react: { text: "⏳", key: ms.key } });
 
     const { data } = await axios.get(YT_API, {
-      params: { apikey: API_KEY, url },
+      params: { url },
       timeout: 60000
     });
 
-    if (!data?.status || !data?.data?.url) {
+    if (!data?.status || !data?.result?.downloadUrl) {
       await client.sendMessage(dest, { react: { text: "❌", key: ms.key } });
       return repondre("❌ Failed to fetch audio. Please check the link and try again.");
     }
 
-    const { title, url: audioUrl } = data.data;
+    const { title, downloadUrl } = data.result;
 
     await client.sendMessage(dest, {
-      audio: { url: audioUrl },
+      audio: { url: downloadUrl },
       mimetype: "audio/mpeg",
       fileName: `${title || "audio"}.mp3`,
       caption: `🎧 *${title || "YouTube Audio"}*\n\n⚡ *Powered by B.M.B TECH*`,
