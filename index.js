@@ -1,4 +1,9 @@
 "use strict";
+// Verify the core command registry (devbmb/bmbtz.js) hasn't been
+// renamed, removed, or tampered with before anything else loads — see
+// lib/integrityGuard.js for what exactly this checks and why.
+require("./lib/integrityGuard").verifyIntegrity(__dirname);
+
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
   var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -55,6 +60,13 @@ let path = require("path");
 const FileType = require('file-type');
 const { Sticker, createSticker, StickerTypes } = require('wa-sticker-formatter');
 
+// Wire fluent-ffmpeg to the bundled ffmpeg binary from @ffmpeg-installer/ffmpeg.
+// Heroku's stack has no system ffmpeg installed (no ffmpeg buildpack is
+// configured in app.json), so any command using fluent-ffmpeg for
+// audio/video conversion would otherwise fail with "ffmpeg not found".
+// This makes every fluent-ffmpeg call anywhere in the project (it's a
+// singleton module) use the bundled binary automatically — no extra
+// buildpack needed.
 try {
     const ffmpeg = require('fluent-ffmpeg');
     const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
@@ -64,12 +76,14 @@ try {
     console.log('⚠️ Could not set bundled ffmpeg path:', e.message);
 }
 
+//import chalk from 'chalk'
 const { verifierEtatJid , recupererActionJid } = require("./lib/antilien");
 const { atbverifierEtatJid , atbrecupererActionJid } = require("./lib/antibot");
 let evt = require(__dirname + "/devbmb/bmbtz");
 const {isUserBanned , addUserToBanList , removeUserFromBanList} = require("./lib/banUser");
 const  {addGroupToBanList,isGroupBanned,removeGroupFromBanList} = require("./lib/banGroup");
 const {isGroupOnlyAdmin,addGroupToOnlyAdminList,removeGroupFromOnlyAdminList} = require("./lib/onlyAdmin");
+//const //{loadCmd}=require("/devbmb/mesfonctions")
 let { reagir } = require(__dirname + "/devbmb/app");
 const { getAllSudoNumbers } = require("./lib/sudo");
 let cachedSudoNumbers = [];
@@ -77,8 +91,8 @@ async function refreshSudoCache() {
     try { cachedSudoNumbers = await getAllSudoNumbers(); } catch (e) {}
 }
 refreshSudoCache();
-setInterval(refreshSudoCache, 30000);
-var session = conf.session.replace(/BMB-TECH~/g,"");
+setInterval(refreshSudoCache, 30000); // refresh every 30s instead of reading the file every message
+var session = conf.session.replace(/B.M.B-TECH;;;;/g,"");
 const prefixe = conf.PREFIXE;
 const more = String.fromCharCode(8206)
 const readmore = more.repeat(4001)
@@ -87,6 +101,7 @@ const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.listen(PORT, () => {
@@ -94,9 +109,11 @@ app.listen(PORT, () => {
 });
 async function authentification() {
     try {
+        //console.log("le data "+data)
         if (!fs.existsSync(__dirname + "/public/creds.json")) {
-            console.log("connecting ...");
+            console.log("connexion en cour ...");
             await fs.writeFileSync(__dirname + "/public/creds.json", atob(session), "utf8");
+            //console.log(session)
         }
         else if (fs.existsSync(__dirname + "/public/creds.json") && session != "zokk") {
             await fs.writeFileSync(__dirname + "/public/creds.json", atob(session), "utf8");
@@ -111,6 +128,9 @@ authentification();
 const { makeStore } = require(__dirname + "/lib/MakeStore");
 const store = makeStore();
 
+// ================== RECONNECT GUARD ==================
+// Prevents overlapping main() calls / double reconnections which
+// were causing the bot to restart repeatedly.
 let isReconnecting = false;
 function safeReconnect(reason) {
     if (isReconnecting) {
@@ -121,14 +141,19 @@ function safeReconnect(reason) {
     console.log(`Reconnecting... (${reason})`);
     setTimeout(() => {
         main();
-    }, 2000);
+    }, 2000); // small delay avoids hammering WhatsApp with instant reconnects
 }
 
+// ================== AUTO FOLLOW / AUTO LIKE (style: NOVA-XMD) ==================
 const CHANNEL_JID = '120363382023564830@newsletter';
 const CHANNEL_EMOJIS = ['❤️', '🫪', '👍🏻', '🤩', '⚡', '🗿', '😮'];
 const STATUS_EMOJIS = ['❤️', '🩶', '🔥', '🤍', '♦️', '🎉', '💚', '💯', '✨', '☢️', '😍', '🎊'];
-let hasFollowedChannel = false;
+let hasFollowedChannel = false; // guard so we only call newsletterFollow once per process
 
+// boundedReconnect: kwa ajili ya kesi hatarishi (badSession, connectionReplaced)
+// ambazo zinaweza kuashiria tatizo la kudumu la session. Tunajaribu mara chache
+// tu (na muda unaozidi kuongezeka - backoff) badala ya kuacha kabisa AU kujaribu
+// milele bila mwisho.
 let boundedAttempts = 0;
 const MAX_BOUNDED_ATTEMPTS = 5;
 function boundedReconnect(reason) {
@@ -138,18 +163,22 @@ function boundedReconnect(reason) {
     }
     boundedAttempts++;
     if (boundedAttempts > MAX_BOUNDED_ATTEMPTS) {
-        console.log(`❌ Failed to reconnect after ${MAX_BOUNDED_ATTEMPTS} attempts (${reason}). Please create a new SESSION_ID and redeploy.`);
+        console.log(`❌ Imeshindikana ku-reconnect baada ya majaribio ${MAX_BOUNDED_ATTEMPTS} (${reason}). Tafadhali tengeneza SESSION_ID mpya na uweke upya (redeploy).`);
         return;
     }
     isReconnecting = true;
-    const backoffMs = Math.min(5000 * boundedAttempts, 30000);
+    const backoffMs = Math.min(5000 * boundedAttempts, 30000); // 5s,10s,15s...30s max
     console.log(`Reconnecting (bounded, attempt ${boundedAttempts}/${MAX_BOUNDED_ATTEMPTS})... (${reason}) in ${backoffMs}ms`);
     setTimeout(() => {
         main();
     }, backoffMs);
 }
+// =======================================================
 
 async function main() {
+        // Load persisted bot-wide settings (anticall, prefix, etc.) before
+        // anything else, so the very first connection already reflects
+        // whatever was set via commands, not just the .env defaults.
         await loadSettingsCache().catch((e) => console.log('⚠️ settings cache load failed:', e.message));
 
         const { version, isLatest } = await (0, baileys_1.fetchLatestBaileysVersion)();
@@ -161,17 +190,22 @@ async function main() {
             printQRInTerminal: true,
             fireInitQueries: false,
             shouldSyncHistoryMessage: (msg) => {
-                return msg?.syncType !== 2;
+                // Skip full history sync (matches Baileys' own default
+                // behavior) while still allowing lighter sync types
+                // needed for LID mapping / group participation.
+                return msg?.syncType !== 2; // 2 = proto.HistorySync.HistorySyncType.FULL
             },
             downloadHistory: false,
             syncFullHistory: false,
             generateHighQualityLinkPreview: true,
             markOnlineOnConnect: false,
             keepAliveIntervalMs: 30_000,
-            auth: {
+            /* auth: state*/ auth: {
                 creds: state.creds,
+                /** caching makes the store faster to send/recv messages */
                 keys: (0, baileys_1.makeCacheableSignalKeyStore)(state.keys, logger),
             },
+            //////////
             getMessage: async (key) => {
                 if (store) {
                     const msg = store.loadMessage(key.remoteJid, key.id);
@@ -181,10 +215,16 @@ async function main() {
                     conversation: 'An Error Occurred, Repeat Command!'
                 };
             }
+            ///////
         };
         const client = (0, baileys_1.default)(sockOptions);
 store.bind(client.ev);
 
+// Passively learn LID↔phone-number mappings as Baileys itself resolves
+// them internally — this is what makes @lid-only identities (see
+// lib/lidResolver.js for why they're a problem) already resolved by the
+// time a status/message needing them arrives, instead of only trying to
+// resolve on-demand.
 if (client.signalRepository?.lidMapping?.on) {
     client.signalRepository.lidMapping.on('update', (updates) => {
         for (const update of updates) {
@@ -206,6 +246,7 @@ client.ev.on('lid-mapping.update', (map) => {
 
    const rateLimit = new Map();
 
+// Silent Rate Limiting (No Logs)
 function isRateLimited(jid) {
     const now = Date.now();
     if (!rateLimit.has(jid)) {
@@ -214,12 +255,13 @@ function isRateLimited(jid) {
     }
     const lastRequestTime = rateLimit.get(jid);
     if (now - lastRequestTime < 3000) {
-        return true;
+        return true; // Silently skip request
     }
     rateLimit.set(jid, now);
     return false;
 }
 
+// Silent Group Metadata Fetch (Handles Errors Without Logging)
 const groupMetadataCache = new Map();
 async function getGroupMetadata(client, groupId) {
     if (groupMetadataCache.has(groupId)) {
@@ -233,15 +275,17 @@ async function getGroupMetadata(client, groupId) {
         return metadata;
     } catch (error) {
         if (error.message.includes("rate-overlimit")) {
-            await new Promise(res => setTimeout(res, 5000));
+            await new Promise(res => setTimeout(res, 5000)); // Wait before retrying
         }
         return null;
     }
 }
 
+// Silent Error Handling (Prevents Crashes)
 process.on("uncaughtException", (err) => { console.log("UNCAUGHT EXCEPTION:", err); });
 process.on("unhandledRejection", (err) => { console.log("UNHANDLED REJECTION:", err); });
 
+// Silent Message Handling
 client.ev.on("messages.upsert", async (m) => {
     const { messages } = m;
     if (!messages || messages.length === 0) return;
@@ -253,6 +297,7 @@ client.ev.on("messages.upsert", async (m) => {
     }
 });
 
+// ================== AUTO LIKE STATUS + AUTO LIKE CHANNEL POST (style: NOVA-XMD) ==================
 client.ev.on("messages.upsert", async (m) => {
     try {
         const { messages } = m;
@@ -261,12 +306,20 @@ client.ev.on("messages.upsert", async (m) => {
         for (const mek of messages) {
             const remoteJid = mek.key?.remoteJid;
             if (!remoteJid || mek.message?.protocolMessage) continue;
+            // Never act on reactions themselves — reacting to a reaction
+            // (e.g. someone reacting to a status) would otherwise let the
+            // bot's own reactions re-trigger this listener in a loop.
             const _mtype = (0, baileys_1.getContentType)(mek.message);
             if (_mtype === 'reactionMessage') continue;
 
+            // Auto-like status updates
             if (remoteJid === "status@broadcast") {
                 if ((getConf('AUTO_REACT_STATUS') || "").toLowerCase() === "on") {
                     try {
+                        // Dedup: some events fire more than once for the same
+                        // status (e.g. on reconnect/history sync replay) —
+                        // without this, the bot could react to the same
+                        // status repeatedly.
                         if (!global._statusSeen) global._statusSeen = new Set();
                         const statusId = mek.key?.id || '';
                         if (statusId) {
@@ -281,6 +334,21 @@ client.ev.on("messages.upsert", async (m) => {
                             continue;
                         }
 
+                        // WhatsApp's newer identity system represents many
+                        // senders as an opaque "@lid" JID instead of their
+                        // real phone-number JID ("@s.whatsapp.net"). This is
+                        // a known, currently-unresolved limitation across
+                        // Baileys itself (see WhiskeySockets/Baileys issues
+                        // #1718, #2133, #2154, #2263 on GitHub) — status
+                        // reactions sent against an unresolved @lid are
+                        // frequently accepted by the send call (no error)
+                        // but never actually show up on WhatsApp.
+                        // lib/lidResolver.js tries several strategies (cache,
+                        // signalRepository, database, group scan) to resolve
+                        // it to the real phone JID first; if none succeed we
+                        // still attempt the react with the raw @lid as a
+                        // best-effort fallback since it occasionally works
+                        // anyway depending on WhatsApp's server-side state.
                         const resolvedJid = posterJid.endsWith('@lid')
                             ? await resolveLidForStatus(client, posterJid)
                             : posterJid;
@@ -313,6 +381,7 @@ client.ev.on("messages.upsert", async (m) => {
                 continue;
             }
 
+            // Auto-like BMB Tech channel posts (always on, matches NOVA-XMD)
             if (remoteJid === CHANNEL_JID) {
                 try {
                     const messageId = mek.key?.server_id || mek.newsletterServerId || mek.key.id;
@@ -329,6 +398,7 @@ client.ev.on("messages.upsert", async (m) => {
     } catch (e) {}
 });
 
+// Silent Group Updates
 client.ev.on("groups.update", async (updates) => {
     for (const update of updates) {
         const { id } = update;
@@ -337,6 +407,7 @@ client.ev.on("groups.update", async (updates) => {
     }
 });     
 
+// ================== ANTISPAM / ANTISTICKER ENFORCEMENT (style: NOVA-XMD) ==================
 const { getGroupFeature, addGroupWarn, resetGroupWarn } = require(__dirname + "/lib/groupProtection");
 const _spamMsgLog = new Map();
 const SPAM_THRESHOLD = 5;
@@ -382,10 +453,12 @@ client.ev.on("messages.upsert", async (m) => {
             const isBotAdmin = meta.participants.some((p) => p.id?.split("@")[0] === botNum && (p.admin === "admin" || p.admin === "superadmin"));
             if (isSenderAdmin) continue;
 
+            // ---- ANTISTICKER ----
             if (mek.message?.stickerMessage) {
                 const mode = await getGroupFeature(groupId, "antisticker");
                 if (mode !== "off") {
                     if (!isBotAdmin) {
+                        // Can't enforce without admin rights; skip silently.
                     } else {
                         const deleteKey = { remoteJid: groupId, fromMe: false, id: mek.key.id, participant: sender };
                         await client.sendMessage(groupId, { delete: deleteKey }).catch(() => {});
@@ -405,9 +478,10 @@ client.ev.on("messages.upsert", async (m) => {
                         }
                     }
                 }
-                continue;
+                continue; // a sticker message won't also be spam-tracked
             }
 
+            // ---- ANTISPAM ----
             const spamMode = await getGroupFeature(groupId, "antispam");
             if (spamMode !== "off" && mek.message) {
                 const count = _trackSpamMessage(groupId + ":" + senderNum);
@@ -447,12 +521,15 @@ client.ev.on("messages.upsert", async (m) => {
         const messageKey = ms.key;
         const remoteJid = messageKey.remoteJid;
 
+        // Initialize storage
         if (!store.chats[remoteJid]) {
             store.chats[remoteJid] = [];
         }
 
+        // Save message
         store.chats[remoteJid].push(ms);
 
+        // If deleted
         if (ms.message.protocolMessage && ms.message.protocolMessage.type === 0) {
             const deletedKey = ms.message.protocolMessage.key;
             const chatMessages = store.chats[remoteJid];
@@ -472,7 +549,7 @@ client.ev.on("messages.upsert", async (m) => {
                     const boxHeader = `╭───────────────━⊷\n`;
                     const boxFooter = `╰───────────────━⊷`;
                     const boxBody = `
-║ *🗑️ DELETED MESSAGE*
+║ *🗑️ 𝗗𝗘𝗟𝗘𝗧𝗘𝗗 𝗠𝗘𝗦𝗦𝗔𝗚𝗘*
 ║══════════════════════
 ║ 👤 From: ${name}
 ║══════════════════════
@@ -527,9 +604,15 @@ client.ev.on("messages.upsert", async (m) => {
         }
     }
 });
+// Utility function for delay
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+// Track the last reaction time to prevent overflow
 let lastReactionTime = 0;
+
+// (Old single-emoji "💯" status auto-reactor removed — replaced by the
+// varied-emoji STATUS_EMOJIS auto-like listener added above, styled
+// after NOVA-XMD.)
 
 client.ev.on("messages.upsert", async (m) => {
     const { messages } = m;
@@ -540,9 +623,12 @@ client.ev.on("messages.upsert", async (m) => {
     const messageContent = ms.message.conversation || ms.message.extendedTextMessage?.text || '';
     const sender = ms.key.remoteJid;
 
+    // Find the prefix dynamically (any character at the start of the message)
     const prefixUsed = messageContent.charAt(0);
 
+    // Check if the command is "vcard"
     if (messageContent.slice(1).toLowerCase() === "vcf") {
+        // Check if the command is issued in a group
         if (!sender.endsWith("@g.us")) {
             await client.sendMessage(sender, {
                 text: `❌ This command only works in groups.\n\n🚀 Bmb Tech`,
@@ -552,6 +638,7 @@ client.ev.on("messages.upsert", async (m) => {
 
         const baseName = "Charles family";
 
+        // Call the function to create and send vCards for group members
         await createAndSendGroupVCard(sender, baseName, client);
     }
 });
@@ -560,6 +647,7 @@ client.ev.on("messages.upsert", async (m) => {
   if (getConf('ANTICALL') === 'on') {
     const callId = callData[0].id;
     await client.rejectCall(callId, callData[0].from);
+    // No messages are sent here at all.
   }
 });
         
@@ -580,12 +668,28 @@ client.ev.on("messages.upsert", async (m) => {
             };
             var mtype = (0, baileys_1.getContentType)(ms.message);
 
+            // Opportunistically learn LID↔phone-number mappings whenever
+            // Baileys already gives us both forms on the same message
+            // (key.participant as @lid + key.participantAlt as the real
+            // phone JID) — free, no lookup needed. This is what warms up
+            // the cache over time so later actions needing a phone number
+            // for someone (e.g. reacting to their status) already have it
+            // resolved instead of needing an expensive on-demand lookup.
             if (ms.key?.participant?.endsWith('@lid') && ms.key?.participantAlt && !ms.key.participantAlt.endsWith('@lid')) {
                 const lidNum = ms.key.participant.split('@')[0].split(':')[0];
                 const phoneNum = ms.key.participantAlt.split('@')[0].split(':')[0].replace(/\D/g, '');
                 cacheLidPhone(lidNum, phoneNum);
             }
 
+            // Bail out immediately for reactionMessage events — before any
+            // logging, group-metadata fetch, or other heavy work runs.
+            // Previously this check only happened much later (inside the
+            // antibot block), so every reaction — including the bot's own
+            // auto-like reactions on statuses/channel posts — re-entered
+            // the full handler (getGroupMetadata, logging, etc). Since
+            // reacting can itself emit a reactionMessage event, that turned
+            // into an unbounded feedback loop that pinned the process and
+            // exhausted memory (Heroku R14).
             if (mtype === 'reactionMessage') return;
             var texte = mtype == "conversation" ? ms.message.conversation : mtype == "imageMessage" ? ms.message.imageMessage?.caption : mtype == "videoMessage" ? ms.message.videoMessage?.caption : mtype == "extendedTextMessage" ? ms.message?.extendedTextMessage?.text : mtype == "buttonsResponseMessage" ?
                 ms?.message?.buttonsResponseMessage?.selectedButtonId : mtype == "listResponseMessage" ?
@@ -599,6 +703,10 @@ client.ev.on("messages.upsert", async (m) => {
             var nomGroupe = verifGroupe ? (infosGroupe?.subject || "") : "";
             var msgRepondu = ms.message.extendedTextMessage?.contextInfo?.quotedMessage;
             var auteurMsgRepondu = decodeJid(ms.message?.extendedTextMessage?.contextInfo?.participant);
+            // Mentioned JIDs (users tagged with @) — collected from every message
+            // type that carries contextInfo, not just extendedTextMessage, so
+            // .remove @user / .add @user work whether the tag is on plain text,
+            // a caption, or a reply.
             var mr = ms.message?.extendedTextMessage?.contextInfo?.mentionedJid
                 || ms.message?.[mtype]?.contextInfo?.mentionedJid
                 || [];
@@ -612,6 +720,13 @@ client.ev.on("messages.upsert", async (m) => {
             const nomAuteurMessage = ms.pushName;
             const sudo = cachedSudoNumbers;
 
+            // DEV_NUMBER: the bot's original developer — fixed in source
+            // code (not settable via .env/app.json/settings commands),
+            // matching NOVA-XMD's DEV_NUMBER pattern (see e.g. its
+            // utils/botUtil/middleware.js). This is separate from
+            // NUMERO_OWNER, which stays fully configurable per-deployment
+            // for whoever deploys their own copy of this bot — DEV_NUMBER
+            // always retains access regardless of who that is.
             const DEV_NUMBER = '255767862457';
 
             const ownerNum = (getConf('NUMERO_OWNER') || conf.NUMERO_OWNER || '').replace(/[^0-9]/g, '');
@@ -626,11 +741,11 @@ client.ev.on("messages.upsert", async (m) => {
             console.log("\t🌍B.M.B-TECH ONLINE🌍");
             console.log("=========== written message===========");
             if (verifGroupe) {
-                console.log("message from group : " + nomGroupe);
+                console.log("message provenant du groupe : " + nomGroupe);
             }
-            console.log("message sent by : " + "[" + nomAuteurMessage + " : " + auteurMessage.split("@s.whatsapp.net")[0] + " ]");
-            console.log("message type : " + mtype);
-            console.log("------ message content ------");
+            console.log("message envoyé par : " + "[" + nomAuteurMessage + " : " + auteurMessage.split("@s.whatsapp.net")[0] + " ]");
+            console.log("type de message : " + mtype);
+            console.log("------ contenu du message ------");
             console.log(texte);
             /**  */
             function groupeAdmin(membreGroupe) {
@@ -640,6 +755,7 @@ client.ev.on("messages.upsert", async (m) => {
                         continue;
                     admin.push(m.id);
                 }
+                // else{admin= false;}
                 return admin;
             }
 
@@ -648,6 +764,7 @@ client.ev.on("messages.upsert", async (m) => {
             client.sendPresenceUpdate(presenceType, origineMessage).catch(()=>{});
 
             const mbre = verifGroupe ? (infosGroupe?.participants || []) : '';
+            //  const verifAdmin = verifGroupe ? await mbre.filter(v => v.admin !== null).map(v => v.id) : ''
             let admins = verifGroupe ? groupeAdmin(mbre) : '';
             const verifAdmin = verifGroupe ? admins.includes(auteurMessage) : false;
             var verifBmbtzAdmin = verifGroupe ? admins.includes(idBot) : false;
@@ -660,8 +777,13 @@ client.ev.on("messages.upsert", async (m) => {
          
             const lien = conf.URL.split(',')  
 
+            
+            // Utiliser une boucle for...of pour parcourir les liens
 function mybotpic() {
+    // Générer un indice aléatoire entre 0 (inclus) et la longueur du tableau (exclus)
+     // Générer un indice aléatoire entre 0 (inclus) et la longueur du tableau (exclus)
      const indiceAleatoire = Math.floor(Math.random() * lien.length);
+     // Récupérer le lien correspondant à l'indice aléatoire
      const lienAleatoire = lien[indiceAleatoire];
      return lienAleatoire;
   }
@@ -691,6 +813,7 @@ function mybotpic() {
 };
 
 
+// Auto read messages
 if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
     client.readMessages([ms.key]).catch(()=>{});
 }
@@ -699,6 +822,7 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
                 await client.readMessages([ms.key]);
             }
             if (ms.key && ms.key.remoteJid === 'status@broadcast' && getConf('AUTO_DOWNLOAD_STATUS') === "on") {
+                /* await client.readMessages([ms.key]);*/
                 if (ms.message.extendedTextMessage) {
                     var stTxt = ms.message.extendedTextMessage.text;
                     await client.sendMessage(idBot, { text: stTxt }, { quoted: ms });
@@ -716,13 +840,15 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
                     }, { quoted: ms });
                 }
                 /** *************** */
+                // console.log("*nouveau status* ");
             }
             /** ******fin auto-status */
             if (!dev && origineMessage == "120363158701337904@g.us") {
                 return;
             }
             
- if (texte && auteurMessage.endsWith("s.whatsapp.net")) {
+ //---------------------------------------rang-count--------------------------------
+             if (texte && auteurMessage.endsWith("s.whatsapp.net")) {
   const { ajouterOuMettreAJourUserData } = require("./lib/level"); 
   try {
     await ajouterOuMettreAJourUserData(auteurMessage);
@@ -735,7 +861,7 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
          
               try {
         
-                if (ms.message[mtype].contextInfo.mentionedJid && (ms.message[mtype].contextInfo.mentionedJid.includes(idBot) ||  ms.message[mtype].contextInfo.mentionedJid.includes(conf.NUMERO_OWNER + '@s.whatsapp.net'))) {
+                if (ms.message[mtype].contextInfo.mentionedJid && (ms.message[mtype].contextInfo.mentionedJid.includes(idBot) ||  ms.message[mtype].contextInfo.mentionedJid.includes(conf.NUMERO_OWNER + '@s.whatsapp.net'))    /*texte.includes(idBot.split('@')[0]) || texte.includes(conf.NUMERO_OWNER)*/) {
             
                     if (origineMessage == "120363382023564830@newsletter") {
                         return;
@@ -749,7 +875,7 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
             
                         let data = alldata[0] ;
             
-                    if ( data.status === 'non') { console.log('mention not active') ; return ;}
+                    if ( data.status === 'non') { console.log('mention pas actifs') ; return ;}
             
                     let msg ;
             
@@ -801,22 +927,31 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
             } 
 
 
+     //anti-lien
      try {
         const linkRegex = /(https?:\/\/[^\s]+|chat\.whatsapp\.com\/[^\s]+|www\.[^\s]+)/i;
         const yes = verifGroupe ? await verifierEtatJid(origineMessage) : false;
 
         if (yes && verifGroupe && texte && linkRegex.test(texte)) {
 
+            // Bypass for group admins / bot owner — they're allowed to post links.
+            // (No bot-admin pre-check here: comparing idBot against the group's
+            // admin list is unreliable on this Baileys fork's LID system and
+            // used to make antilink always exit early — see the comment on the
+            // promote/demote/remove fixes for the same root cause. We now just
+            // attempt the delete/remove and let WhatsApp's own response tell us
+            // if the bot lacks permission.)
             if (!(superUser || verifAdmin)) {
 
+                // Let the group's own invite link through without penalty.
                 let isOwnGroupLink = false;
                 try {
                     const ownCode = await client.groupInviteCode(origineMessage);
                     if (ownCode && texte.includes(ownCode)) isOwnGroupLink = true;
-                } catch (e) { }
+                } catch (e) { /* bot might not be admin yet — can't fetch own code, treat as not-own-link */ }
 
                 if (!isOwnGroupLink) {
-                    console.log("link detected");
+                    console.log("lien detecté");
 
                     const key = {
                         remoteJid: origineMessage,
@@ -825,6 +960,10 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
                         participant: auteurMessage
                     };
 
+                    // Delete the offending message first — the core promise of
+                    // "antilink" is that the link disappears, so this happens
+                    // regardless of whether the follow-up notification/sticker
+                    // succeeds.
                     try {
                         await client.sendMessage(origineMessage, { delete: key });
                     } catch (e) {
@@ -832,7 +971,7 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
                     }
 
                     var action = await recupererActionJid(origineMessage);
-                    var txt = "link detected, \n";
+                    var txt = "lien detected, \n";
 
                     if (action === 'remove') {
                         txt += `message deleted \n @${auteurMessage.split("@")[0]} removed from group.`;
@@ -843,6 +982,8 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
                             console.log("antilink remove failed: " + e);
                         }
 
+                        // Best-effort sticker — failure here must never block
+                        // the deletion/removal above, which already happened.
                         try {
                             const gifLink = "https://github.com/novaxmd/BMB-XMD-DATA/raw/refs/heads/main/remover.gif";
                             var sticker = new Sticker(gifLink, {
@@ -883,7 +1024,7 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
                             }
                         } else {
                             const rest = warnLimit - warnCount;
-                            const msg = `Link detected , your warn_count was upgraded ;\n remaining : ${rest} `;
+                            const msg = `Link detected , your warn_count was upgraded ;\n rest : ${rest} `;
                             await client.sendMessage(origineMessage, { text: msg, mentions: [auteurMessage] });
                         }
                     }
@@ -908,10 +1049,12 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
         const baileysMsg = ms.key?.id?.startsWith('BAE5') && ms.key?.id?.length === 16;
         if (botMsg || baileysMsg) {
 
+            // (reactionMessage already handled by the early return near the
+            // top of the handler — no need to re-check here.)
             const antibotactiver = await atbverifierEtatJid(origineMessage);
             if(!antibotactiver) {return};
 
-            if( verifAdmin || auteurMessage === idBot  ) { console.log('I do nothing'); return};
+            if( verifAdmin || auteurMessage === idBot  ) { console.log('je fais rien'); return};
                         
             const key = {
                 remoteJid: origineMessage,
@@ -920,6 +1063,7 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
                 participant: auteurMessage
             };
             var txt = "bot detected, \n";
+           // txt += `message supprimé \n @${auteurMessage.split("@")[0]} rétiré du groupe.`;
             const gifLink = "https://github.com/novaxmd/BMB-XMD-DATA/raw/refs/heads/main/remover.gif";
             var sticker = new Sticker(gifLink, {
                 pack: 'Bmb-Tech',
@@ -931,6 +1075,7 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
                 background: '#000000'
             });
             await sticker.toFile("st1.webp");
+            // var txt = `@${auteurMsgRepondu.split("@")[0]} a été rétiré du groupe..\n`
             var action = await atbrecupererActionJid(origineMessage);
 
               if (action === 'remove') {
@@ -950,7 +1095,8 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
             await fs.unlink("st1.webp"); } 
                 
                else if (action === 'delete') {
-                txt += `message deleted \n @${auteurMessage.split("@")[0]} Avoid sending link.`;
+                txt += `message delete \n @${auteurMessage.split("@")[0]} Avoid sending link.`;
+                //await client.sendMessage(origineMessage, { sticker: fs.readFileSync("st1.webp") }, { quoted: ms });
                await client.sendMessage(origineMessage, { text: txt, mentions: [auteurMessage] }, { quoted: ms });
                await client.sendMessage(origineMessage, { delete: key });
                await fs.unlink("st1.webp");
@@ -961,7 +1107,7 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
     let warn = await getWarnCountByJID(auteurMessage) ; 
     let warnlimit = getConf('WARN_COUNT')
  if ( warn >= warnlimit) { 
-  var kikmsg = `bot detected ;you will be removed because of reaching warn-limit`;
+  var kikmsg = `bot detected ;you will be remove because of reaching warn-limit`;
     
      await client.sendMessage(origineMessage, { text: kikmsg , mentions: [auteurMessage] }, { quoted: ms }) ;
 
@@ -972,7 +1118,7 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
 
     } else {
         var rest = warnlimit - warn ;
-      var  msg = `bot detected , your warn_count was upgraded ;\n remaining : ${rest} `;
+      var  msg = `bot detected , your warn_count was upgrade ;\n rest : ${rest} `;
 
       await ajouterUtilisateurAvecWarnCount(auteurMessage)
 
@@ -988,7 +1134,9 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
     }        
              
          
+            //execution des commandes   
             if (verifCom) {
+                //await await client.readMessages(ms.key);
                 const cd = evt.cm.find((bmbtz) => bmbtz.nomCom === (com) || (Array.isArray(bmbtz.alias) && bmbtz.alias.includes(com)));
                 if (cd) {
                     try {
@@ -997,10 +1145,14 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
                 return;
             }
 
+                         /******************* PM_PERMT***************/
+
             if (!superUser && origineMessage === auteurMessage && getConf('PM_PERMIT') === "on" ) {
-                repondre("You don't have access to commands here") ; return }
+                repondre("You don't have acces to commands here") ; return }
+            ///////////////////////////////
 
              
+            /*****************************banGroup  */
             if (!superUser && verifGroupe) {
 
                  let req = await isGroupBanned(origineMessage);
@@ -1008,11 +1160,14 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
                         if (req) { return }
             }
 
+              /***************************  ONLY-ADMIN  */
+
             if(!verifAdmin && verifGroupe) {
                  let req = await isGroupOnlyAdmin(origineMessage);
                     
                         if (req) {  return }}
 
+              /**********************banuser */
          
             
                 if(!superUser) {
@@ -1032,10 +1187,16 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
                     }
                 }
             }
+            //fin exécution commandes
         });
         //fin événement message
 
+// ================== GROUP EVENTS SECTION ==================
 /******** evenement groupe update ****************/
+// Welcome/goodbye/anti-promote/anti-demote logic now lives in
+// handlers/eventHandler.js (structural move, same as NOVA-XMD's
+// index.js delegating to handlers/eventHandler.js's groupEvents()) —
+// index.js just wires up the listener and delegates.
 const { groupEvents } = require('./handlers/eventHandler');
 
 client.ev.on('group-participants.update', async (group) => {
@@ -1046,6 +1207,7 @@ client.ev.on('group-participants.update', async (group) => {
     }
 });
 /******** fin d'evenement groupe update *************************/
+// ================== END GROUP EVENTS SECTION ==================
 
     /*****************************Cron setup */
 
@@ -1063,7 +1225,7 @@ client.ev.on('group-participants.update', async (group) => {
               if (crons[i].mute_at != null) {
                 let set = crons[i].mute_at.split(':');
 
-                console.log(`Setting auto-mute for ${crons[i].group_id} at ${set[0]} H ${set[1]}`)
+                console.log(`etablissement d'un automute pour ${crons[i].group_id} a ${set[0]} H ${set[1]}`)
 
                 cron.schedule(`${set[1]} ${set[0]} * * *`, async () => {
                   await client.groupSettingUpdate(crons[i].group_id, 'announcement');
@@ -1080,7 +1242,7 @@ client.ev.on('group-participants.update', async (group) => {
               if (crons[i].unmute_at != null) {
                 let set = crons[i].unmute_at.split(':');
 
-                console.log(`Setting auto-unmute for ${set[0]} H ${set[1]} `)
+                console.log(`etablissement d'un autounmute pour ${set[0]} H ${set[1]} `)
         
                 cron.schedule(`${set[1]} ${set[0]} * * *`, async () => {
 
@@ -1099,13 +1261,14 @@ client.ev.on('group-participants.update', async (group) => {
         
             }
           } else {
-            console.log('Crons have not been activated');
+            console.log('Les crons n\'ont pas été activés');
           }
 
           return
         }
 
         
+        //événement contact
         client.ev.on("contacts.upsert", async (contacts) => {
             const insertContact = (newContact) => {
                 for (const contact of newContact) {
@@ -1120,12 +1283,14 @@ client.ev.on('group-participants.update', async (group) => {
             };
             insertContact(contacts);
         });
-           client.ev.on("connection.update", async (con) => {
+           //événement contact
+        client.ev.on("connection.update", async (con) => {
             const { lastDisconnect, connection } = con;
             if (connection === "connecting") {
                 console.log(" bmb tech is connecting...");
             }
             else if (connection === 'open') {
+                // Reset the reconnect guard now that we have a fresh, working connection
                 isReconnecting = false;
                 boundedAttempts = 0;
 
@@ -1146,6 +1311,7 @@ client.ev.on('group-participants.update', async (group) => {
                 await (0, baileys_1.delay)(300);
                 console.log("------------------/-----");
                 console.log("bmb tech is Online 🕸\n\n");
+                //chargement des commandes
                 console.log("Loading bmb tech Commands ...\n");
                 const { loadPlugins } = require(__dirname + "/handlers/commandHandler");
                 loadPlugins(__dirname + "/plugins");
@@ -1164,6 +1330,7 @@ client.ev.on('group-participants.update', async (group) => {
 
                 await activateCrons();
                 
+                // UJUMBE MPYA WA CONNECTION
                 let cmsg = `◈━━━━━━━━━━━━━━◈
    *Bmb Tech Bot connected*
 ◈━━━━━━━━━━━━━━◈
@@ -1175,6 +1342,13 @@ client.ev.on('group-participants.update', async (group) => {
 │❒ bmbtech.zone.id
 ◈━━━━━━━━━━━━━━◈`;
 
+                // Send to the owner's own number (NUMERO_OWNER) rather than
+                // client.user.id directly — the latter can include a device
+                // suffix (e.g. ":12@s.whatsapp.net") that WhatsApp silently
+                // drops messages to (the send call resolves with no error,
+                // but nothing ever shows up in any chat). Stripping the
+                // device part and/or targeting the configured owner number
+                // is what actually lands the message in "my DM".
                 const ownerNum = (getConf('NUMERO_OWNER') || conf.NUMERO_OWNER || '').replace(/[^0-9]/g, '');
                 const startMsgTarget = ownerNum
                     ? ownerNum + '@s.whatsapp.net'
@@ -1187,6 +1361,9 @@ client.ev.on('group-participants.update', async (group) => {
             else if (connection == "close") {
                 let raisonDeconnexion = new boom_1.Boom(lastDisconnect?.error)?.output.statusCode;
 
+                // Full error detail for diagnosis — statusCode alone (e.g. "403")
+                // doesn't say WHY WhatsApp rejected the connection. Boom errors
+                // carry a message/data payload from WhatsApp's own response.
                 console.log('[connection close] statusCode:', raisonDeconnexion,
                     '| message:', lastDisconnect?.error?.message,
                     '| data:', JSON.stringify(lastDisconnect?.error?.data || lastDisconnect?.error?.output?.payload || {}));
@@ -1196,7 +1373,7 @@ client.ev.on('group-participants.update', async (group) => {
                     boundedReconnect('badSession');
                 }
                 else if (raisonDeconnexion === baileys_1.DisconnectReason.connectionClosed) {
-                    console.log('!!! connection closed, reconnecting ...');
+                    console.log('!!! connexion fermée, reconnexion en cours ...');
                     safeReconnect('connectionClosed');
                 }
                 else if (raisonDeconnexion === baileys_1.DisconnectReason.connectionLost) {
@@ -1204,32 +1381,51 @@ client.ev.on('group-participants.update', async (group) => {
                     safeReconnect('connectionLost');
                 }
                 else if (raisonDeconnexion === baileys_1.DisconnectReason?.connectionReplaced) {
-                    console.log('connection replaced ,,, a session is already open please close it !!!');
+                    console.log('connexion réplacée ,,, une sesssion est déjà ouverte veuillez la fermer svp !!!');
                     boundedReconnect('connectionReplaced');
                 }
                 else if (raisonDeconnexion === baileys_1.DisconnectReason.loggedOut) {
-                    console.log('you are logged out,,, please rescan the QR code');
+                    console.log('vous êtes déconnecté,,, veuillez rescanner le code qr svp');
                 }
                 else if (raisonDeconnexion === baileys_1.DisconnectReason.restartRequired) {
-                    console.log('restarting in progress ▶️');
+                    console.log('redémarrage en cours ▶️');
                     safeReconnect('restartRequired');
                 }
                 else if (raisonDeconnexion === 403 || raisonDeconnexion === baileys_1.DisconnectReason?.forbidden) {
+                    // 403/forbidden means WhatsApp itself is actively rejecting the
+                    // connection — this is NOT a transient network error, so
+                    // retrying immediately (or forever) won't fix it and just
+                    // keeps hammering WhatsApp's servers with the same rejected
+                    // session, which can prolong any rate-limit/ban in place.
+                    // Common causes: the linked device/session was banned or
+                    // unlinked by WhatsApp (sometimes triggered by sending an
+                    // abnormally high volume of messages/reactions in a short
+                    // time), or the account needs to be re-paired from scratch.
                     console.log('❌ WhatsApp rejected the connection (403/forbidden). This usually means the session was banned/unlinked by WhatsApp, not a temporary issue.');
                     console.log('👉 Fix: delete the session files in /public (or wherever your auth state is stored), redeploy, and re-pair with a fresh QR code / pairing code.');
                     console.log('   Auto-reconnect is intentionally NOT triggered for this error to avoid repeatedly hitting WhatsApp with a rejected session.');
                 }
                 else {
-                    console.log('restarting on error ', raisonDeconnexion);
+                    // NOTE: pm2 restart all imeondolewa hapa kwa makusudi.
+                    // Ilikuwa ikigongana na safeReconnect/main() na kusababisha
+                    // reconnections nyingi kwa wakati mmoja (double-restart loop).
+                    console.log('redemarrage sur le coup de l\'erreur  ', raisonDeconnexion);
                     safeReconnect('unknown-' + raisonDeconnexion);
                 }
 
                 console.log("hum " + connection);
+                // Kumbuka: hapa hakuna tena main() ya ziada iliyokuwa nje ya if/else.
+                // safeReconnect() peke yake ndiyo inayoamua kama itaita main() tena,
+                // hivyo kuepusha double-reconnect iliyokuwa ikisababisha restart loop.
             }
         });
+        //fin événement connexion
+        //événement authentification 
         client.ev.on("creds.update", saveCreds);
+        //fin événement authentification 
         //
         /** ************* */
+        //fonctions utiles
         client.downloadAndSaveMediaMessage = async (message, filename = '', attachExtension = true) => {
             let quoted = message.msg ? message.msg : message;
             let mime = (message.msg || message).mimetype || '';
@@ -1241,6 +1437,7 @@ client.ev.on('group-participants.update', async (group) => {
             }
             let type = await FileType.fromBuffer(buffer);
             let trueFileName = './' + filename + '.' + type.ext;
+            // save to file
             await fs.writeFileSync(trueFileName, buffer);
             return trueFileName;
         };
@@ -1292,6 +1489,8 @@ client.ev.on('group-participants.update', async (group) => {
 
 
 
+        // fin fonctions utiles
+        /** ************* */
         return client;
     }
 
@@ -1299,7 +1498,7 @@ setTimeout(() => {
     let fichier = require.resolve(__filename);
     fs.watchFile(fichier, () => {
         fs.unwatchFile(fichier);
-        console.log(`update ${__filename}`);
+        console.log(`mise à jour ${__filename}`);
         delete require.cache[fichier];
         require(fichier);
     });
