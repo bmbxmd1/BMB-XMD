@@ -1,7 +1,5 @@
 "use strict";
 // Verify the core command registry (devbmb/bmbtz.js) hasn't been
-// renamed, removed, or tampered with before anything else loads — see
-// lib/integrityGuard.js for what exactly this checks and why.
 require("./lib/integrityGuard").verifyIntegrity(__dirname);
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
@@ -43,10 +41,6 @@ const { loadSettingsCache, getCachedSettingsSync } = require('./lib/settingsCach
 /**
  * Reads a bot-wide toggle setting from the live, database-backed cache
  * (set via commands like .anticall, .setprefix, etc — see
- * plugins/Settings/settings.js), falling back to the settings.js/.env
- * default if the command has never been used yet. This is what makes
- * those toggle commands actually persist across restarts instead of
- * silently reverting.
  */
 function getConf(key) {
     const cached = getCachedSettingsSync();
@@ -92,7 +86,7 @@ async function refreshSudoCache() {
 }
 refreshSudoCache();
 setInterval(refreshSudoCache, 30000); // refresh every 30s instead of reading the file every message
-var session = conf.session.replace(/B.M.B-TECH;;;;/g,"");
+var session = conf.session.replace(/BMB-TECH~/g,"");
 const prefixe = conf.PREFIXE;
 const more = String.fromCharCode(8206)
 const readmore = more.repeat(4001)
@@ -150,10 +144,7 @@ const CHANNEL_EMOJIS = ['❤️', '🫪', '👍🏻', '🤩', '⚡', '🗿', '�
 const STATUS_EMOJIS = ['❤️', '🩶', '🔥', '🤍', '♦️', '🎉', '💚', '💯', '✨', '☢️', '😍', '🎊'];
 let hasFollowedChannel = false; // guard so we only call newsletterFollow once per process
 
-// boundedReconnect: kwa ajili ya kesi hatarishi (badSession, connectionReplaced)
-// ambazo zinaweza kuashiria tatizo la kudumu la session. Tunajaribu mara chache
-// tu (na muda unaozidi kuongezeka - backoff) badala ya kuacha kabisa AU kujaribu
-// milele bila mwisho.
+// boundedReconnect: for high-risk cases  (badSession, connectionReplaced)
 let boundedAttempts = 0;
 const MAX_BOUNDED_ATTEMPTS = 5;
 function boundedReconnect(reason) {
@@ -1330,15 +1321,14 @@ client.ev.on('group-participants.update', async (group) => {
 
                 await activateCrons();
                 
-                // UJUMBE MPYA WA CONNECTION
+                // NEW MESSAGE OF  CONNECTION
                 let cmsg = `◈━━━━━━━━━━━━━━◈
    *Bmb Tech Bot connected*
 ◈━━━━━━━━━━━━━━◈
 │❒ *Mode*: *[ ${md} ]*
 │❒ *Prefix*: *[ ${prefixe} ]*
-│❒ *Command*: *[ 456 ]*
 
-│❒ *Website by Bmb Tech*
+│❒ *Hosting Web*
 │❒ bmbtech.zone.id
 ◈━━━━━━━━━━━━━━◈`;
 
