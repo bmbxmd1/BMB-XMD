@@ -5,10 +5,10 @@
 </p>
 ---
 <p align="center">
-  <a href="https://github.com/Dev-bmbtech/BMB-TECH/fork">
+  <a href="https://github.com/novaxmd/BMB-TECH/fork">
     <img src="https://img.shields.io/github/forks/Dev-bmbtech/BMB-TECH?label=Forks&style=social" alt="GitHub Forks">
   </a>
-  <a href="https://github.com/Dev-bmbtech/BMB-TECH/stargazers">
+  <a href="https://github.com/novaxmd/BMB-TECH/stargazers">
     <img src="https://img.shields.io/github/stars/Dev-bmbtech/BMB-TECH?style=social" alt="GitHub Stars">
   </a>
 </p>
@@ -16,13 +16,13 @@
 </a>
 </p>
 <p align="center">
-<a href="https://github.com/Dev-bmbtech"><img title="Author" src="https://img.shields.io/badge/BMB-TECH-darkgreen?style=for-the-badge&logo=whatsapp"></a>
+<a href="https://github.com/novaxmd"><img title="Author" src="https://img.shields.io/badge/BMB-TECH-darkgreen?style=for-the-badge&logo=whatsapp"></a>
 <p/>
 
 <p align="center">
     <strong>1. FORK REPOSITORY</strong>
   <br>
-    <a href="https://github.com/Dev-bmbtech/BMB-TECH/fork" target="_blank">
+    <a href="https://github.com/novaxmd/BMB-TECH/fork" target="_blank">
         <img alt="Fork Repo" src="https://img.shields.io/badge/Fork%20Repo-100000?style=for-the-badge&logo=scan&logoColor=white&labelColor=darkblue&color=darkblue"/>
     </a>
 </p>
@@ -38,7 +38,7 @@
 <p align="center">
     <strong>3. DEPLOY TO HEROKU</strong>
     <br>
-    <a href="https://dashboard.heroku.com/new?template=https://github.com/Dev-bmbtech/BMB-TECH" target="_blank">
+    <a href="https://dashboard.heroku.com/new?template=https://github.com/novaxmd/BMB-TECH" target="_blank">
         <img alt="Heroku" src="https://img.shields.io/badge/Deploy-100000?style=for-the-badge&logo=scan&logoColor=white&labelColor=purple&color=purple"/>
     </a>
 </p>
@@ -46,7 +46,7 @@
 <p align="center">
     <strong>4. DOWNLOAD BOT ZIP</strong>
     <br>
-    <a href="https://github.com/Dev-bmbtech/BMB-TECH/archive/refs/heads/main.zip" target="_blank">
+    <a href="https://github.com/novaxmd/BMB-TECH/archive/refs/heads/main.zip" target="_blank">
         <img alt="Zip File" src="https://img.shields.io/badge/downlod-100000?style=for-the-badge&logo=scan&logoColor=white&labelColor=darkorange&color=darkorange"/>
     </a>
 </p>
