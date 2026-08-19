@@ -34,7 +34,7 @@ const quotedContact = {
 const more = String.fromCharCode(8206);
 const readMore = more.repeat(4001);
 
-bmbtz({ nomCom: "menu2", categorie: "General" }, async (dest, client, commandOptions) => {
+bmbtz({ nomCom: "menu", categorie: "General" }, async (dest, client, commandOptions) => {
     let { ms, repondre, prefixe, nomAuteurMessage } = commandOptions;
     let { cm } = require(__dirname + "/../../devbmb/bmbtz");
     let commandsByCategory = {};
