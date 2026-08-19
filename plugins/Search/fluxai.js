@@ -1,136 +1,92 @@
 const { bmbtz } = require("../../devbmb/bmbtz");
 const axios = require("axios");
 
-// VCard Contact
-const quotedContact = {
-  key: {
-    fromMe: false,
-    participant: `0@s.whatsapp.net`,
-    remoteJid: "status@broadcast"
-  },
-  message: {
-    contactMessage: {
-      displayName: "B.M.B VERIFIED ✅",
-      vcard: "BEGIN:VCARD\nVERSION:3.0\nFN:B.M.B VERIFIED ✅\nORG:BMB-TECH BOT;\nTEL;type=CELL;type=VOICE;waid=255767862457:+255767862457\nEND:VCARD"
+/**
+ * lyrics
+ *
+ * Rewritten to use https://api.nexray.eu.cc/search/lyrics (the old
+ * dreaded.site/some-random-api/davidcyriltech endpoints all stopped
+ * working). Also fixes two bugs from the previous version:
+ *   - `s.PREFIXE` referenced an undefined variable `s` (would throw if
+ *     no song name was given) — now uses `prefixe` from commandeOptions.
+ *   - `aliases:` isn't a real field the command registry reads (the
+ *     correct one is `alias`), so the old aliases never worked — fixed.
+ */
+bmbtz({
+  nomCom: "lyrics",
+  reaction: '🎵',
+  categorie: "Search",
+  alias: ["lyric", "mistari"]
+}, async (dest, client, commandeOptions) => {
+  const { repondre, arg, ms, prefixe } = commandeOptions;
+  const songName = arg.join(" ").trim();
+
+  if (!songName) {
+    return repondre(`Please provide a song name. Example: *${prefixe}lyrics Shape of You*`);
+  }
+
+  await client.sendMessage(dest, { react: { text: "🔎", key: ms.key } }).catch(() => {});
+
+  let data;
+  try {
+    const response = await axios.get(
+      `https://api.nexray.eu.cc/search/lyrics?q=${encodeURIComponent(songName)}`,
+      { timeout: 15000 }
+    );
+    data = response.data;
+  } catch (error) {
+    console.log("[lyrics] API request failed:", error.message);
+    await client.sendMessage(dest, { react: { text: "❌", key: ms.key } }).catch(() => {});
+    return repondre(`❌ Couldn't reach the lyrics service. Try again in a bit.`);
+  }
+
+  if (!data?.status || !data?.result) {
+    await client.sendMessage(dest, { react: { text: "❌", key: ms.key } }).catch(() => {});
+    return repondre(`❌ Couldn't find lyrics for *${songName}*`);
+  }
+
+  const { title, artist, thumbnail } = data.result;
+  const lyricsInfo = data.result.lyrics || {};
+  let lyricsText = lyricsInfo.plain_lyrics;
+
+  if (!lyricsText || lyricsText === "-") {
+    // Fall back to synced lyrics with the [mm:ss.xx] timestamps stripped,
+    // if that's all the API returned for this track.
+    if (lyricsInfo.synced_lyrics && lyricsInfo.synced_lyrics !== "-") {
+      lyricsText = lyricsInfo.synced_lyrics.replace(/\[\d{2}:\d{2}\.\d{2}\]\s?/g, "");
     }
   }
-};
 
-// Context ya newsletter
-const contextInfo = {
-  forwardingScore: 999,
-  isForwarded: true,
-  forwardedNewsletterMessageInfo: {
-    newsletterJid: "120363382023564830@newsletter",
-    newsletterName: "𝙱.𝙼.𝙱-𝚃𝙴𝙲𝙷",
-    serverMessageId: 1
+  if (!lyricsText || lyricsText === "-") {
+    await client.sendMessage(dest, { react: { text: "❌", key: ms.key } }).catch(() => {});
+    return repondre(`🎶 *${title}* - ${artist}\n\n(No lyrics text available for this track — only metadata was found.)`);
   }
-};
 
-// =============== FLUX AI ===============
-bmbtz({
-  nomCom: "fluxai",
-  aliases: ["flux", "imagine"],
-  categorie: "Search",
-  reaction: "📸"
-}, async (jid, sock, { ms, repondre, arg }) => {
-  const q = arg.join(" ");
-  if (!q) return repondre("❌ 𝙿𝚕𝚎𝚊𝚜𝚎 𝚙𝚛𝚘𝚟𝚒𝚍𝚎 𝚊 𝚙𝚛𝚘𝚖𝚙𝚝 𝚏𝚘𝚛 𝚝𝚑𝚎 𝚒𝚖𝚊𝚐𝚎.");
-  await repondre("> *𝙲𝚁𝙴𝙰𝚃𝙸𝙽𝙶 𝙿𝙷𝙾𝚃𝙾 📸*");
+  const caption = `🎶 *${title}* - ${artist}\n\n${lyricsText}\n\n*Powered by B.M.B-TECH*`;
+  const imageUrl = thumbnail && thumbnail !== "-" ? thumbnail : "https://files.catbox.moe/rpea5k.jpg";
 
   try {
-    const url = `https://iamtkm.vercel.app/ai/NanoBanana?apikey=tkm&prompt=${encodeURIComponent(q)}`;
-    const { data } = await axios.get(url, { responseType: "arraybuffer" });
+    const imageResponse = await axios.get(imageUrl, { responseType: "arraybuffer", timeout: 15000 });
+    const imageBuffer = Buffer.from(imageResponse.data);
 
-    await sock.sendMessage(jid, {
-      image: Buffer.from(data, "binary"),
-      caption: `🌲 *𝙶𝙴𝙽𝙴𝚁𝙰𝚃𝙴𝙳 𝙱𝚈 𝙱.𝙼.𝙱-𝚃𝙴𝙲𝙷* 😎\n📸 𝚁𝙴𝙰𝙳𝚈 : *${q}*`,
-      contextInfo
-    }, { quoted: quotedContact });
+    await client.sendMessage(dest, {
+      image: imageBuffer,
+      caption,
+      contextInfo: {
+        externalAdReply: {
+          title: "B.M.B-TECH Lyrics Finder",
+          body: "Get any song lyrics instantly",
+          thumbnail: imageBuffer,
+          mediaType: 1,
+          renderLargerThumbnail: false,
+        }
+      }
+    }, { quoted: ms });
 
+    await client.sendMessage(dest, { react: { text: "✅", key: ms.key } }).catch(() => {});
   } catch (error) {
-    console.error("FluxAI Error:", error);
-    repondre(`❌ Error: ${error.message || "Failed to generate image."}`);
-  }
-});
-
-// =============== STABLE DIFFUSION ===============
-bmbtz({
-  nomCom: "stablediffusion",
-  aliases: ["sdiffusion", "imagine2"],
-  categorie: "Search",
-  reaction: "📸"
-}, async (jid, sock, { ms, repondre, arg }) => {
-  const q = arg.join(" ");
-  if (!q) return repondre("❌ 𝙿𝚕𝚎𝚊𝚜𝚎 𝚙𝚛𝚘𝚟𝚒𝚍𝚎 𝚊 𝚙𝚛𝚘𝚖𝚙𝚝 𝚏𝚘𝚛 𝚝𝚑𝚎 𝚒𝚖𝚊𝚐𝚎.");
-  await repondre("> *𝙲𝚁𝙴𝙰𝚃𝙸𝙽𝙶 𝙿𝙷𝙾𝚃𝙾 📸*");
-
-  try {
-    const url = `https://iamtkm.vercel.app/ai/NanoBanana?apikey=tkm&prompt=${encodeURIComponent(q)}`;
-    const { data } = await axios.get(url, { responseType: "arraybuffer" });
-
-    await sock.sendMessage(jid, {
-      image: Buffer.from(data, "binary"),
-      caption: `🌲 *𝙶𝙴𝙽𝙴𝚁𝙰𝚃𝙴𝙳 𝙱𝚈 𝙱.𝙼.𝙱-𝚃𝙴𝙲𝙷* 😎\n✨ 𝚁𝙴𝙰𝙳𝚈: *${q}*`,
-      contextInfo
-    }, { quoted: quotedContact });
-
-  } catch (error) {
-    console.error("StableDiffusion Error:", error);
-    repondre(`❌ Error: ${error.message || "Failed to generate image."}`);
-  }
-});
-
-// =============== STABILITY AI ===============
-bmbtz({
-  nomCom: "stabilityai",
-  aliases: ["stability", "imagine3"],
-  categorie: "Search",
-  reaction: "📸"
-}, async (jid, sock, { ms, repondre, arg }) => {
-  const q = arg.join(" ");
-  if (!q) return repondre("❌ 𝙿𝚕𝚎𝚊𝚜𝚎 𝚙𝚛𝚘𝚟𝚒𝚍𝚎 𝚊 𝚙𝚛𝚘𝚖𝚙𝚝 𝚏𝚘𝚛 𝚝𝚑𝚎 𝚒𝚖𝚊𝚐𝚎.");
-  await repondre("> *𝙲𝚁𝙴𝙰𝚃𝙸𝙽𝙶 𝙿𝙷𝙾𝚃𝙾 📸*");
-
-  try {
-    const url = `https://iamtkm.vercel.app/ai/NanoBanana?apikey=tkm&prompt=${encodeURIComponent(q)}`;
-    const { data } = await axios.get(url, { responseType: "arraybuffer" });
-
-    await sock.sendMessage(jid, {
-      image: Buffer.from(data, "binary"),
-      caption: `🌲 *𝙶𝙴𝙽𝙴𝚁𝙰𝚃𝙴𝙳 𝙱𝚈 𝙱.𝙼.𝙱-𝚃𝙴𝙲𝙷* 😎\n📸 𝚁𝙴𝙰𝙳𝚈: *${q}*`,
-      contextInfo
-    }, { quoted: quotedContact });
-
-  } catch (error) {
-    console.error("StabilityAI Error:", error);
-    repondre(`❌ Error: ${error.message || "Failed to generate image."}`);
-  }
-});
-
-// =============== NANOBANANA ===============
-bmbtz({
-  nomCom: "nanobanana",
-  aliases: ["nano", "imagine4"],
-  categorie: "Search",
-  reaction: "📸"
-}, async (jid, sock, { ms, repondre, arg }) => {
-  const q = arg.join(" ");
-  if (!q) return repondre("❌ 𝙿𝚕𝚎𝚊𝚜𝚎 𝚙𝚛𝚘𝚟𝚒𝚍𝚎 𝚊 𝚙𝚛𝚘𝚖𝚙𝚝 𝚏𝚘𝚛 𝚝𝚑𝚎 𝚒𝚖𝚊𝚐𝚎.");
-  await repondre("> *𝙲𝚁𝙴𝙰𝚃𝙸𝙽𝙶 𝙿𝙷𝙾𝚃𝙾 📸*");
-
-  try {
-    const url = `https://iamtkm.vercel.app/ai/NanoBanana?apikey=tkm&prompt=${encodeURIComponent(q)}`;
-    const { data } = await axios.get(url, { responseType: "arraybuffer" });
-
-    await sock.sendMessage(jid, {
-      image: Buffer.from(data, "binary"),
-      caption: `🌲 *𝙶𝙴𝙽𝙴𝚁𝙰𝚃𝙴𝙳 𝙱𝚈 𝙱.𝙼.𝙱-𝚃𝙴𝙲𝙷* 😎\n🍌 𝚁𝙴𝙰𝙳𝚈: *${q}*`,
-      contextInfo
-    }, { quoted: quotedContact });
-
-  } catch (error) {
-    console.error("NanoBanana Error:", error);
-    repondre(`❌ Error: ${error.message || "Failed to generate image."}`);
+    console.log("[lyrics] image send failed, falling back to text:", error.message);
+    await repondre(caption.length > 4000 ? caption.slice(0, 4000) + "\n\n*[Truncated]*" : caption);
+    await client.sendMessage(dest, { react: { text: "✅", key: ms.key } }).catch(() => {});
   }
 });
