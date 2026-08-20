@@ -99,7 +99,6 @@ const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.listen(PORT, () => {
@@ -108,7 +107,7 @@ app.listen(PORT, () => {
 async function authentification() {
     try {
         if (!fs.existsSync(__dirname + "/public/creds.json")) {
-            console.log("Connecting...");
+            console.log("Connecting ...");
             await fs.writeFileSync(__dirname + "/public/creds.json", atob(session), "utf8");
         }
         else if (fs.existsSync(__dirname + "/public/creds.json") && session != "zokk") {
@@ -124,9 +123,6 @@ authentification();
 const { makeStore } = require(__dirname + "/lib/MakeStore");
 const store = makeStore();
 
-// ================== RECONNECT GUARD ==================
-// Prevents overlapping main() calls / double reconnections which
-// were causing the bot to restart repeatedly.
 let isReconnecting = false;
 function safeReconnect(reason) {
     if (isReconnecting) {
@@ -140,15 +136,11 @@ function safeReconnect(reason) {
     }, 2000);
 }
 
-// ================== AUTO FOLLOW / AUTO LIKE (style: NOVA-XMD) ==================
 const CHANNEL_JID = '120363382023564830@newsletter';
 const CHANNEL_EMOJIS = ['❤️', '🫪', '👍🏻', '🤩', '⚡', '🗿', '😮'];
 const STATUS_EMOJIS = ['❤️', '🩶', '🔥', '🤍', '♦️', '🎉', '💚', '💯', '✨', '☢️', '😍', '🎊'];
 let hasFollowedChannel = false;
 
-// boundedReconnect: for dangerous cases (badSession, connectionReplaced)
-// that may indicate a persistent session problem. We try only a few times
-// (with increasing backoff) instead of giving up completely OR trying forever.
 let boundedAttempts = 0;
 const MAX_BOUNDED_ATTEMPTS = 5;
 function boundedReconnect(reason) {
@@ -168,12 +160,8 @@ function boundedReconnect(reason) {
         main();
     }, backoffMs);
 }
-// =======================================================
 
 async function main() {
-        // Load persisted bot-wide settings (anticall, prefix, etc.) before
-        // anything else, so the very first connection already reflects
-        // whatever was set via commands, not just the .env defaults.
         await loadSettingsCache().catch((e) => console.log('⚠️ settings cache load failed:', e.message));
 
         const { version, isLatest } = await (0, baileys_1.fetchLatestBaileysVersion)();
@@ -185,9 +173,6 @@ async function main() {
             printQRInTerminal: true,
             fireInitQueries: false,
             shouldSyncHistoryMessage: (msg) => {
-                // Skip full history sync (matches Baileys' own default
-                // behavior) while still allowing lighter sync types
-                // needed for LID mapping / group participation.
                 return msg?.syncType !== 2;
             },
             downloadHistory: false,
@@ -212,11 +197,6 @@ async function main() {
         const client = (0, baileys_1.default)(sockOptions);
 store.bind(client.ev);
 
-// Passively learn LID↔phone-number mappings as Baileys itself resolves
-// them internally — this is what makes @lid-only identities (see
-// lib/lidResolver.js for why they're a problem) already resolved by the
-// time a status/message needing them arrives, instead of only trying to
-// resolve on-demand.
 if (client.signalRepository?.lidMapping?.on) {
     client.signalRepository.lidMapping.on('update', (updates) => {
         for (const update of updates) {
@@ -238,7 +218,6 @@ client.ev.on('lid-mapping.update', (map) => {
 
    const rateLimit = new Map();
 
-// Silent Rate Limiting (No Logs)
 function isRateLimited(jid) {
     const now = Date.now();
     if (!rateLimit.has(jid)) {
@@ -253,7 +232,6 @@ function isRateLimited(jid) {
     return false;
 }
 
-// Silent Group Metadata Fetch (Handles Errors Without Logging)
 const groupMetadataCache = new Map();
 async function getGroupMetadata(client, groupId) {
     if (groupMetadataCache.has(groupId)) {
@@ -273,11 +251,9 @@ async function getGroupMetadata(client, groupId) {
     }
 }
 
-// Silent Error Handling (Prevents Crashes)
 process.on("uncaughtException", (err) => { console.log("UNCAUGHT EXCEPTION:", err); });
 process.on("unhandledRejection", (err) => { console.log("UNHANDLED REJECTION:", err); });
 
-// Silent Message Handling
 client.ev.on("messages.upsert", async (m) => {
     const { messages } = m;
     if (!messages || messages.length === 0) return;
@@ -289,7 +265,6 @@ client.ev.on("messages.upsert", async (m) => {
     }
 });
 
-// ================== AUTO LIKE STATUS + AUTO LIKE CHANNEL POST (style: NOVA-XMD) ==================
 client.ev.on("messages.upsert", async (m) => {
     try {
         const { messages } = m;
@@ -298,13 +273,9 @@ client.ev.on("messages.upsert", async (m) => {
         for (const mek of messages) {
             const remoteJid = mek.key?.remoteJid;
             if (!remoteJid || mek.message?.protocolMessage) continue;
-            // Never act on reactions themselves — reacting to a reaction
-            // (e.g. someone reacting to a status) would otherwise let the
-            // bot's own reactions re-trigger this listener in a loop.
             const _mtype = (0, baileys_1.getContentType)(mek.message);
             if (_mtype === 'reactionMessage') continue;
 
-            // Auto-like status updates
             if (remoteJid === "status@broadcast") {
                 if ((getConf('AUTO_REACT_STATUS') || "").toLowerCase() === "on") {
                     try {
@@ -354,7 +325,6 @@ client.ev.on("messages.upsert", async (m) => {
                 continue;
             }
 
-            // Auto-like BMB Tech channel posts (always on, matches NOVA-XMD)
             if (remoteJid === CHANNEL_JID) {
                 try {
                     const messageId = mek.key?.server_id || mek.newsletterServerId || mek.key.id;
@@ -371,7 +341,6 @@ client.ev.on("messages.upsert", async (m) => {
     } catch (e) {}
 });
 
-// Silent Group Updates
 client.ev.on("groups.update", async (updates) => {
     for (const update of updates) {
         const { id } = update;
@@ -380,7 +349,6 @@ client.ev.on("groups.update", async (updates) => {
     }
 });     
 
-// ================== ANTISPAM / ANTISTICKER ENFORCEMENT (style: NOVA-XMD) ==================
 const { getGroupFeature, addGroupWarn, resetGroupWarn } = require(__dirname + "/lib/groupProtection");
 const _spamMsgLog = new Map();
 const SPAM_THRESHOLD = 5;
@@ -426,7 +394,6 @@ client.ev.on("messages.upsert", async (m) => {
             const isBotAdmin = meta.participants.some((p) => p.id?.split("@")[0] === botNum && (p.admin === "admin" || p.admin === "superadmin"));
             if (isSenderAdmin) continue;
 
-            // ---- ANTISTICKER ----
             if (mek.message?.stickerMessage) {
                 const mode = await getGroupFeature(groupId, "antisticker");
                 if (mode !== "off") {
@@ -453,7 +420,6 @@ client.ev.on("messages.upsert", async (m) => {
                 continue;
             }
 
-            // ---- ANTISPAM ----
             const spamMode = await getGroupFeature(groupId, "antispam");
             if (spamMode !== "off" && mek.message) {
                 const count = _trackSpamMessage(groupId + ":" + senderNum);
@@ -522,7 +488,7 @@ client.ev.on("messages.upsert", async (m) => {
                     const boxHeader = `╭───────────────━⊷\n`;
                     const boxFooter = `╰───────────────━⊷`;
                     const boxBody = `
-║ *🗑️ DELETED MESSAGE*
+║ *🗑️ 𝗗𝗘𝗟𝗘𝗧𝗘𝗗 𝗠𝗘𝗦𝗦𝗔𝗚𝗘*
 ║══════════════════════
 ║ 👤 From: ${name}
 ║══════════════════════
@@ -580,10 +546,6 @@ client.ev.on("messages.upsert", async (m) => {
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 let lastReactionTime = 0;
-
-// (Old single-emoji "💯" status auto-reactor removed — replaced by the
-// varied-emoji STATUS_EMOJIS auto-like listener added above, styled
-// after NOVA-XMD.)
 
 client.ev.on("messages.upsert", async (m) => {
     const { messages } = m;
@@ -680,12 +642,13 @@ client.ev.on("messages.upsert", async (m) => {
             console.log("\t🌍B.M.B-TECH ONLINE🌍");
             console.log("=========== incoming message ===========");
             if (verifGroupe) {
-                console.log("message from group: " + nomGroupe);
+                console.log("message from group : " + nomGroupe);
             }
             console.log("message sent by: " + "[" + nomAuteurMessage + " : " + auteurMessage.split("@s.whatsapp.net")[0] + " ]");
             console.log("message type: " + mtype);
             console.log("------ message content ------");
             console.log(texte);
+            /**  */
             function groupeAdmin(membreGroupe) {
                 let admin = [];
                 for (m of membreGroupe) {
@@ -704,9 +667,22 @@ client.ev.on("messages.upsert", async (m) => {
             let admins = verifGroupe ? groupeAdmin(mbre) : '';
             const verifAdmin = verifGroupe ? admins.includes(auteurMessage) : false;
             var verifBmbtzAdmin = verifGroupe ? admins.includes(idBot) : false;
+            /** ** */
+            /** ***** */
             const arg = texte ? texte.trim().split(/ +/).slice(1) : null;
-            const verifCom = texte ? texte.startsWith(getConf('PREFIXE')) : false;
-            const com = verifCom ? texte.slice(1).trim().split(/ +/).shift().toLowerCase() : false;
+
+            const ALL_PREFIXES = ['.', '!', '#', '/', '$', '?', '+', '-', '*', '~', '@', '%', '&', '^', '=', '|'];
+            const configuredPrefix = getConf('PREFIXE') || '.';
+            let usedPrefix = null;
+            if (texte) {
+                if (texte.startsWith(configuredPrefix)) {
+                    usedPrefix = configuredPrefix;
+                } else {
+                    usedPrefix = ALL_PREFIXES.find((p) => texte.startsWith(p)) || null;
+                }
+            }
+            const verifCom = !!usedPrefix;
+            const com = verifCom ? texte.slice(usedPrefix.length).trim().split(/ +/).shift().toLowerCase() : false;
            
          
             const lien = conf.URL.split(',')  
@@ -743,10 +719,10 @@ function mybotpic() {
 };
 
 
-// Auto read messages
 if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
     client.readMessages([ms.key]).catch(()=>{});
 }
+            /** ****** auto-status handling  */
             if (ms.key && ms.key.remoteJid === "status@broadcast" && getConf('AUTO_READ_STATUS') === "on") {
                 await client.readMessages([ms.key]);
             }
@@ -767,7 +743,9 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
                         video: { url: stVideo }, caption: stMsg
                     }, { quoted: ms });
                 }
+                /** *************** */
             }
+            /** ******fin auto-status */
             if (!dev && origineMessage == "120363158701337904@g.us") {
                 return;
             }
@@ -852,7 +830,7 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
             } 
 
 
-     //anti-link
+     //anti-lien
      try {
         const linkRegex = /(https?:\/\/[^\s]+|chat\.whatsapp\.com\/[^\s]+|www\.[^\s]+)/i;
         const yes = verifGroupe ? await verifierEtatJid(origineMessage) : false;
@@ -926,7 +904,7 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
 
                         if (warnCount >= warnLimit) {
                             await resetGroupWarn(origineMessage, 'antilink', senderNum);
-                            const kikmsg = `link detected, you will be removed because of reaching warn-limit`;
+                            const kikmsg = `link detected , you will be removed because of reaching warn-limit`;
                             await client.sendMessage(origineMessage, { text: kikmsg, mentions: [auteurMessage] });
                             try {
                                 await client.groupParticipantsUpdate(origineMessage, [auteurMessage], "remove");
@@ -935,7 +913,7 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
                             }
                         } else {
                             const rest = warnLimit - warnCount;
-                            const msg = `Link detected, your warn_count was upgraded;\n rest: ${rest} `;
+                            const msg = `Link detected , your warn_count was upgraded ;\n rest : ${rest} `;
                             await client.sendMessage(origineMessage, { text: msg, mentions: [auteurMessage] });
                         }
                     }
@@ -1002,7 +980,7 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
             await fs.unlink("st1.webp"); } 
                 
                else if (action === 'delete') {
-                txt += `message deleted \n @${auteurMessage.split("@")[0]} Avoid sending links.`;
+                txt += `message delete \n @${auteurMessage.split("@")[0]} Avoid sending link.`;
                await client.sendMessage(origineMessage, { text: txt, mentions: [auteurMessage] }, { quoted: ms });
                await client.sendMessage(origineMessage, { delete: key });
                await fs.unlink("st1.webp");
@@ -1013,7 +991,7 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
     let warn = await getWarnCountByJID(auteurMessage) ; 
     let warnlimit = getConf('WARN_COUNT')
  if ( warn >= warnlimit) { 
-  var kikmsg = `bot detected; you will be removed because of reaching warn-limit`;
+  var kikmsg = `bot detected ;you will be remove because of reaching warn-limit`;
     
      await client.sendMessage(origineMessage, { text: kikmsg , mentions: [auteurMessage] }, { quoted: ms }) ;
 
@@ -1024,7 +1002,7 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
 
     } else {
         var rest = warnlimit - warn ;
-      var  msg = `bot detected, your warn_count was upgraded;\n rest: ${rest} `;
+      var  msg = `bot detected , your warn_count was upgrade ;\n rest : ${rest} `;
 
       await ajouterUtilisateurAvecWarnCount(auteurMessage)
 
@@ -1040,7 +1018,7 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
     }        
              
          
-            //command execution
+            //execution des commandes   
             if (verifCom) {
                 const cd = evt.cm.find((bmbtz) => bmbtz.nomCom === (com) || (Array.isArray(bmbtz.alias) && bmbtz.alias.includes(com)));
                 if (cd) {
@@ -1053,7 +1031,7 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
                          /******************* PM_PERMT***************/
 
             if (!superUser && origineMessage === auteurMessage && getConf('PM_PERMIT') === "on" ) {
-                repondre("You don't have access to commands here") ; return }
+                repondre("You don't have acces to commands here") ; return }
             ///////////////////////////////
 
              
@@ -1093,14 +1071,9 @@ if (getConf('AUTO_READ') === 'on' && !ms.key.fromMe) {
                 }
             }
         });
-        //end message event
+        //fin événement message
 
-// ================== GROUP EVENTS SECTION ==================
 /******** group participants update event ****************/
-// Welcome/goodbye/anti-promote/anti-demote logic now lives in
-// handlers/eventHandler.js (structural move, same as NOVA-XMD's
-// index.js delegating to handlers/eventHandler.js's groupEvents()) —
-// index.js just wires up the listener and delegates.
 const { groupEvents } = require('./handlers/eventHandler');
 
 client.ev.on('group-participants.update', async (group) => {
@@ -1111,7 +1084,6 @@ client.ev.on('group-participants.update', async (group) => {
     }
 });
 /******** end of group participants update event *************************/
-// ================== END GROUP EVENTS SECTION ==================
 
     /*****************************Cron setup */
 
@@ -1129,7 +1101,7 @@ client.ev.on('group-participants.update', async (group) => {
               if (crons[i].mute_at != null) {
                 let set = crons[i].mute_at.split(':');
 
-                console.log(`Setting auto-mute for ${crons[i].group_id} at ${set[0]}H ${set[1]}`)
+                console.log(`Setting up automute for ${crons[i].group_id} at ${set[0]}H ${set[1]}`)
 
                 cron.schedule(`${set[1]} ${set[0]} * * *`, async () => {
                   await client.groupSettingUpdate(crons[i].group_id, 'announcement');
@@ -1146,7 +1118,7 @@ client.ev.on('group-participants.update', async (group) => {
               if (crons[i].unmute_at != null) {
                 let set = crons[i].unmute_at.split(':');
 
-                console.log(`Setting auto-unmute for ${set[0]}H ${set[1]}`)
+                console.log(`Setting up autounmute at ${set[0]}H ${set[1]}`)
         
                 cron.schedule(`${set[1]} ${set[0]} * * *`, async () => {
 
@@ -1172,7 +1144,7 @@ client.ev.on('group-participants.update', async (group) => {
         }
 
         
-        //contact event
+        //événement contact
         client.ev.on("contacts.upsert", async (contacts) => {
             const insertContact = (newContact) => {
                 for (const contact of newContact) {
@@ -1187,7 +1159,7 @@ client.ev.on('group-participants.update', async (group) => {
             };
             insertContact(contacts);
         });
-           //connection event
+           //événement contact
         client.ev.on("connection.update", async (con) => {
             const { lastDisconnect, connection } = con;
             if (connection === "connecting") {
@@ -1214,7 +1186,6 @@ client.ev.on('group-participants.update', async (group) => {
                 await (0, baileys_1.delay)(300);
                 console.log("------------------/-----");
                 console.log("bmb tech is Online 🕸\n\n");
-                //loading commands
                 console.log("Loading bmb tech Commands ...\n");
                 const { loadPlugins } = require(__dirname + "/handlers/commandHandler");
                 loadPlugins(__dirname + "/plugins");
@@ -1233,7 +1204,6 @@ client.ev.on('group-participants.update', async (group) => {
 
                 await activateCrons();
                 
-                // NEW CONNECTION MESSAGE
                 let cmsg = `◈━━━━━━━━━━━━━━◈
    *Bmb Tech Bot connected*
 ◈━━━━━━━━━━━━━━◈
@@ -1269,7 +1239,7 @@ client.ev.on('group-participants.update', async (group) => {
                     safeReconnect('connectionClosed');
                 }
                 else if (raisonDeconnexion === baileys_1.DisconnectReason.connectionLost) {
-                    console.log('connection error 😞 ,,, trying to reconnect... ');
+                    console.log('connection error ,,, trying to reconnect... ');
                     safeReconnect('connectionLost');
                 }
                 else if (raisonDeconnexion === baileys_1.DisconnectReason?.connectionReplaced) {
@@ -1280,7 +1250,7 @@ client.ev.on('group-participants.update', async (group) => {
                     console.log('you are disconnected ,,, please rescan the QR code');
                 }
                 else if (raisonDeconnexion === baileys_1.DisconnectReason.restartRequired) {
-                    console.log('restarting ▶️');
+                    console.log('Restarting now');
                     safeReconnect('restartRequired');
                 }
                 else if (raisonDeconnexion === 403 || raisonDeconnexion === baileys_1.DisconnectReason?.forbidden) {
@@ -1296,13 +1266,13 @@ client.ev.on('group-participants.update', async (group) => {
                 console.log("connection state: " + connection);
             }
         });
-        //end connection event
-        //auth event
+        //fin événement connexion
+        //événement authentification 
         client.ev.on("creds.update", saveCreds);
-        //end auth event
+        //fin événement authentification 
         //
         /** ************* */
-        //utility functions
+        //fonctions utiles
         client.downloadAndSaveMediaMessage = async (message, filename = '', attachExtension = true) => {
             let quoted = message.msg ? message.msg : message;
             let mime = (message.msg || message).mimetype || '';
@@ -1365,7 +1335,7 @@ client.ev.on('group-participants.update', async (group) => {
 
 
 
-        // end utility functions
+        // fin fonctions utiles
         /** ************* */
         return client;
     }
