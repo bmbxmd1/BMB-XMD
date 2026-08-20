@@ -3,7 +3,7 @@
   "description": "ʙᴇsᴛ ᴡʜᴀᴛsᴀᴘᴘ ʙᴏᴛ ᴅᴇᴠᴇʟᴏᴘᴇᴅ ʙʏ ʙᴍʙ ᴛᴇᴄʜ 🇹🇿",
   "keywords": ["bot", "node", "baileys", "whatsapp"],
   "logo": "https://files.catbox.moe/hflcbc.jpg",
-  "repository": "https://github.com/Dev-bmbtech/bmb-project",
+  "repository": "https://github.com/novaxmd/BMB-TECH",
   "succes_url": "/",
   "stack": "heroku-24",
   "env": {
@@ -11,11 +11,6 @@
       "description": "Your session ID — the code you receive after scanning the QR code / pairing.",
       "value": "",
       "required": true
-    },
-    "PREFIX": {
-      "description": "Command prefix (can also be changed later with .setprefix).",
-      "value": ".",
-      "required": false
     }
   },
   "formation": {
