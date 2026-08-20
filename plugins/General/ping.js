@@ -22,7 +22,7 @@ bmbtz({
     const uptime = process.uptime();
     const uptimeStr = `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`;
 
-    const msg = `◈━ *📡 BMB-TECH PING*\n━◈` +
+    const msg = `*📡 BMB-TECH PING*\n` +
       `\n` +
       `⏱️ Response: *${ping}ms*\n` +
       `📆 Date: *${date}*\n` +
