@@ -280,24 +280,28 @@ bmbtz({ nomCom: "info", categorie: 'Group' }, async (dest, client, commandeOptio
   if (superUser || verifAdmin) {
     const enetatoui = await verifierEtatJid(dest);
     try {
-      if (!arg || !arg[0] || arg === ' ') {
+      if (!arg || !arg[0]) {
+        const currentAction = await recupererActionJid(dest);
         return repondre(
 `╭───❰ *ANTILINK HELP MENU* ❱───╮
 │
+│ Status: ${enetatoui ? 'ON ✅' : 'OFF ❌'}
+│ Action: ${currentAction.toUpperCase()}
+│
 │ ⚙️ *antilink on* → Activate anti-link
 │ ⚙️ *antilink off* → Deactivate anti-link
-│ ⚙️ *antilink action/remove* → Remove link silently
-│ ⚙️ *antilink action/warn* → Warn user
-│ ⚙️ *antilink action/delete* → Delete link only
+│ ⚙️ *antilink delete* → Delete link only
+│ ⚙️ *antilink warn* → Delete + warn (kicks after limit)
+│ ⚙️ *antilink remove* → Delete + kick immediately
 │
 │ 📝 Default action is: *delete*
 ╰────────────────────────────╯`
         );
       }
 
-      const input = arg.join('').toLowerCase();
+      const sub = arg[0].toLowerCase();
 
-      if (arg[0] === 'on') {
+      if (sub === 'on') {
         if (enetatoui) {
           repondre(
 `╭───❰ *ANTILINK STATUS* ❱───╮
@@ -312,7 +316,7 @@ bmbtz({ nomCom: "info", categorie: 'Group' }, async (dest, client, commandeOptio
 ╰──────────────────────────╯`
           );
         }
-      } else if (arg[0] === 'off') {
+      } else if (sub === 'off') {
         if (enetatoui) {
           await ajouterOuMettreAJourJid(dest, "non");
           repondre(
@@ -327,31 +331,27 @@ bmbtz({ nomCom: "info", categorie: 'Group' }, async (dest, client, commandeOptio
 ╰──────────────────────────╯`
           );
         }
-      } else if (input.startsWith('action/')) {
-        let action = input.split("/")[1];
-        if (['remove', 'warn', 'delete'].includes(action)) {
-          await mettreAJourAction(dest, action);
-          repondre(
-`╭───❰ *ANTILINK ACTION UPDATED* ❱───╮
-│ 🔧 Action settings to: *${action.toUpperCase()}*
-╰────────────────────────────────╯`
-          );
-        } else {
-          repondre(
-`❌ Invalid action.
-✅ Allowed: *remove*, *warn*, *delete*`
-          );
+      } else if (['remove', 'warn', 'delete'].includes(sub)) {
+        await mettreAJourAction(dest, sub);
+        if (!enetatoui) {
+          await ajouterOuMettreAJourJid(dest, "oui");
         }
+        repondre(
+`╭───❰ *ANTILINK ACTION UPDATED* ❱───╮
+│ 🔧 Action set to: *${sub.toUpperCase()}*
+│ Status: ON ✅
+╰────────────────────────────────╯`
+        );
       } else {
         repondre(
 `❗ Wrong usage.
 
-Try: *antilink on*, *antilink off*, *antilink action/remove* etc.`
+Try: *antilink on*, *antilink off*, *antilink delete*, *antilink warn*, *antilink remove*.`
         );
       }
 
     } catch (error) {
-      repondre("❌ *Error:* " + error.message || error);
+      repondre("❌ *Error:* " + (error.message || error));
     }
 
   } else {
@@ -481,30 +481,30 @@ bmbtz({ nomCom: "gdesc", categorie: 'Group' }, async (dest, client, commandeOpti
 
 bmbtz({ nomCom: "gpp", categorie: 'Group' }, async (dest, client, commandeOptions) => {
 
-  const { repondre, msgRepondu, verifAdmin } = commandeOptions;
+  const { repondre, msgRepondu, verifAdmin, superUser } = commandeOptions;
 
-  if (!verifAdmin) {
+  if (!(verifAdmin || superUser)) {
     repondre("order reserved for administrators of the group");
     return;
   }; 
-  if (msgRepondu.imageMessage) {
+  if (msgRepondu && msgRepondu.imageMessage) {
     const pp = await  client.downloadAndSaveMediaMessage(msgRepondu.imageMessage) ;
 
     await client.updateProfilePicture(dest, { url: pp })
                 .then( () => {
                     client.sendMessage(dest,{text:"Group pfp changed"})
                     fs.unlinkSync(pp)
-                }).catch(() =>   client.sendMessage(dest,{text:err})
+                }).catch((err) =>   client.sendMessage(dest,{text: 'Failed to update group picture: ' + err})
 )
         
   } else {
-    repondre('Please mention an image')
+    repondre('Please reply to an image')
   }
 
 });
 
 /////////////
-bmbtz({ nomCom: "tag", categorie: 'Group', reaction: "🎤" }, async (dest, client, commandeOptions) => {
+bmbtz({ nomCom: "hidetag", categorie: 'Group', reaction: "🎤" }, async (dest, client, commandeOptions) => {
   const { repondre, msgRepondu, verifGroupe, arg, verifAdmin, superUser } = commandeOptions;
 
   if (!verifGroupe) return repondre("🚫 *This command is allowed only in groups.*");
@@ -538,7 +538,7 @@ bmbtz({ nomCom: "tag", categorie: 'Group', reaction: "🎤" }, async (dest, clie
         mentions: tag
       };
     } else if (msgRepondu.stickerMessage) {
-      let media = await client.downloadAndSaveMediaMessage(msgRepondu.stickerMessage);
+      let media = await client.downloadAndSaveMediaMessage(msgRepondu.stickerMessage, '', true, 'sticker');
       let stickerMess = new Sticker(media, {
         pack: 'bmb-tech',
         type: StickerTypes.CROPPED,
