@@ -292,7 +292,7 @@ bmbtz({ nomCom: "save", categorie: "Mods" }, async (dest, client, commandeOption
         } else if (msgRepondu.stickerMessage) {
   
       
-          let media  = await client.downloadAndSaveMediaMessage(msgRepondu.stickerMessage)
+          let media  = await client.downloadAndSaveMediaMessage(msgRepondu.stickerMessage, '', true, 'sticker')
   
           let stickerMess = new Sticker(media, {
             pack: 'B.M.B-TECH',
