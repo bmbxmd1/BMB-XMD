@@ -94,7 +94,7 @@ const alea = (ext) => {
     }
 
     sticker = new Sticker(buffer, {
-      pack:"Beltah-Md", // pack stick
+      pack:"Bmb-Tech", // pack stick
       author:  nomAuteurMessage, // name of the author of the stick
       type:
         arg.includes("-r") || arg.includes("-c")
@@ -137,16 +137,19 @@ bmbtz({nomCom:"take",categorie: "Conversion", reaction: "💗"},async(origineMes
   } ;
   if (msgRepondu.imageMessage) {
      mediamsg = msgRepondu.imageMessage
+     mediaKind = 'image'
   } else if(msgRepondu.videoMessage) {
 mediamsg = msgRepondu.videoMessage
+mediaKind = 'video'
   } 
   else if (msgRepondu.stickerMessage) {
     mediamsg = msgRepondu.stickerMessage ;
+    mediaKind = 'sticker' ;
   } else {
     repondre('Uh a media please'); return
   } ;
 
-  var stick = await client.downloadAndSaveMediaMessage(mediamsg)
+  var stick = await client.downloadAndSaveMediaMessage(mediamsg, '', true, mediaKind)
 
      let stickerMess = new Sticker(stick, {
             pack: pack,
@@ -215,7 +218,7 @@ bmbtz({ nomCom: "write", categorie: "Conversion", reaction: "☘️" }, async (o
     // Create the sticker
     const stickerMess = new Sticker(meme, {
       pack: nomAuteurMessage,
-      author: 'anyway-Md',
+      author: 'Bmb-Tech',
       type: StickerTypes.FULL,
       categories: ["🤩", "🎉"],
       id: "12345",
@@ -247,7 +250,7 @@ bmbtz({nomCom:"photo",categorie: "Conversion", reaction: "☘️"},async(dest,cl
       repondre('Um mention a non-animated sticker'); return
   } ;
 
- let mediaMess = await client.downloadAndSaveMediaMessage(msgRepondu.stickerMessage);
+ let mediaMess = await client.downloadAndSaveMediaMessage(msgRepondu.stickerMessage, '', true, 'sticker');
 
   const alea = (ext) => {
   return `${Math.floor(Math.random() * 10000)}${ext}`;};
