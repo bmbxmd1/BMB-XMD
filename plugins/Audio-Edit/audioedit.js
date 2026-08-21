@@ -1,6 +1,6 @@
 const { bmbtz } = require("../../devbmb/bmbtz");
 const fs = require("fs");
-const { exec } = require("child_process");
+const { execFile } = require("child_process");
 
 const filename = `${Math.random().toString(36)}`;
 
@@ -39,9 +39,9 @@ bmbtz({
   if (!msgRepondu || !msgRepondu.audioMessage) return repondre("❗ Please mention an audio");
   const media = await client.downloadAndSaveMediaMessage(msgRepondu.audioMessage);
   const ran = `${filename}.mp3`;
-  const settings = "-af atempo=4/4,asettingsrate=44500*2/3";
+  const settings = ["-af", "atempo=4/4,asettingsrate=44500*2/3"];
 
-  exec(`ffmpeg -i ${media} ${settings} ${ran}`, (err) => {
+  execFile("ffmpeg", ["-i", media, ...settings, ran], (err) => {
     fs.unlinkSync(media);
     if (err) return repondre("❌ Error during processing: " + err);
     const buffer = fs.readFileSync(ran);
@@ -65,9 +65,9 @@ bmbtz({
   if (!msgRepondu || !msgRepondu.audioMessage) return repondre("❗ Please mention an audio");
   const media = await client.downloadAndSaveMediaMessage(msgRepondu.audioMessage);
   const ran = `${filename}.mp3`;
-  const settings = "-af equalizer=f=18:width_type=o:width=2:g=14";
+  const settings = ["-af", "equalizer=f=18:width_type=o:width=2:g=14"];
 
-  exec(`ffmpeg -i ${media} ${settings} ${ran}`, (err) => {
+  execFile("ffmpeg", ["-i", media, ...settings, ran], (err) => {
     fs.unlinkSync(media);
     if (err) return repondre("❌ Error during processing: " + err);
     const buffer = fs.readFileSync(ran);
@@ -91,9 +91,9 @@ bmbtz({
   if (!msgRepondu || !msgRepondu.audioMessage) return repondre("❗ Please mention an audio");
   const media = await client.downloadAndSaveMediaMessage(msgRepondu.audioMessage);
   const ran = `${filename}.mp3`;
-  const settings = '-filter_complex "areverse"';
+  const settings = ["-filter_complex", "areverse"];
 
-  exec(`ffmpeg -i ${media} ${settings} ${ran}`, (err) => {
+  execFile("ffmpeg", ["-i", media, ...settings, ran], (err) => {
     fs.unlinkSync(media);
     if (err) return repondre("❌ Error during processing: " + err);
     const buffer = fs.readFileSync(ran);
@@ -117,9 +117,9 @@ bmbtz({
   if (!msgRepondu || !msgRepondu.audioMessage) return repondre("❗ Please mention an audio");
   const media = await client.downloadAndSaveMediaMessage(msgRepondu.audioMessage);
   const ran = `${filename}.mp3`;
-  const settings = '-filter:a "atempo=0.8,asettingsrate=44100"';
+  const settings = ["-filter:a", "atempo=0.8,asettingsrate=44100"];
 
-  exec(`ffmpeg -i ${media} ${settings} ${ran}`, (err) => {
+  execFile("ffmpeg", ["-i", media, ...settings, ran], (err) => {
     fs.unlinkSync(media);
     if (err) return repondre("❌ Error during processing: " + err);
     const buffer = fs.readFileSync(ran);
@@ -143,9 +143,9 @@ bmbtz({
   if (!msgRepondu || !msgRepondu.audioMessage) return repondre("❗ Please mention an audio");
   const media = await client.downloadAndSaveMediaMessage(msgRepondu.audioMessage);
   const ran = `${filename}.mp3`;
-  const settings = '-filter:a "atempo=0.9,asettingsrate=65100"';
+  const settings = ["-filter:a", "atempo=0.9,asettingsrate=65100"];
 
-  exec(`ffmpeg -i ${media} ${settings} ${ran}`, (err) => {
+  execFile("ffmpeg", ["-i", media, ...settings, ran], (err) => {
     fs.unlinkSync(media);
     if (err) return repondre("❌ Error during processing: " + err);
     const buffer = fs.readFileSync(ran);
@@ -169,9 +169,9 @@ bmbtz({
   if (!msgRepondu || !msgRepondu.audioMessage) return repondre("❗ Please mention an audio");
   const media = await client.downloadAndSaveMediaMessage(msgRepondu.audioMessage);
   const ran = `${filename}.mp3`;
-  const settings = '-filter:a "atempo=1.07,asettingsrate=44100*1.20"';
+  const settings = ["-filter:a", "atempo=1.07,asettingsrate=44100*1.20"];
 
-  exec(`ffmpeg -i ${media} ${settings} ${ran}`, (err) => {
+  execFile("ffmpeg", ["-i", media, ...settings, ran], (err) => {
     fs.unlinkSync(media);
     if (err) return repondre("❌ Error during processing: " + err);
     const buffer = fs.readFileSync(ran);
