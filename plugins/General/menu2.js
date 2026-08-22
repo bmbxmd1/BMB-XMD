@@ -1,18 +1,10 @@
-const { bmbtz, cm } = require("../../devbmb/bmbtz");
+const fs = require('fs-extra');
+const path = require('path');
+const { bmbtz } = require(__dirname + "/../../devbmb/bmbtz");
 const os = require("os");
 const moment = require("moment-timezone");
-const s = require("../../settings");
-const { getCachedSettingsSync } = require("../../lib/settingsCache");
+const s = require(__dirname + "/../../settings");
 
-/**
- * menu
- *
- * Second visual pass — gives each category its own boxed "card"
- * (open decorative line → italicized command list → close line),
- * matching the polished, structured feel of the reference layout the
- * user liked, while using an entirely different glyph set/border
- * style so it doesn't read as a literal copy.
- */
 const newsletterContext = {
   contextInfo: {
     forwardingScore: 999,
@@ -39,69 +31,61 @@ const quotedContact = {
   }
 };
 
-const readMoreChar = String.fromCharCode(8206);
-const readMore = readMoreChar.repeat(4001);
+const more = String.fromCharCode(8206);
+const readMore = more.repeat(4001);
 
-bmbtz({ nomCom: "menu", alias: ["allmenu", "helplist"], categorie: "General" }, async (dest, client, commandOptions) => {
-  let { ms, repondre, prefixe, nomAuteurMessage } = commandOptions;
+bmbtz({ nomCom: "menu", categorie: "General" }, async (dest, client, commandOptions) => {
+    let { ms, repondre, prefixe, nomAuteurMessage } = commandOptions;
+    let { cm } = require(__dirname + "/../../devbmb/bmbtz");
+    let commandsByCategory = {};
+    let mode = (s.MODE.toLowerCase() === "yes") ? "PUBLIC" : "PRIVATE";
 
-  try {
-    const commandsByCategory = {};
-    cm.forEach((com) => {
-      const cat = com.categorie || "General";
-      if (!commandsByCategory[cat]) commandsByCategory[cat] = [];
-      commandsByCategory[cat].push(com.nomCom);
+    cm.map((com) => {
+        if (!commandsByCategory[com.categorie]) commandsByCategory[com.categorie] = [];
+        commandsByCategory[com.categorie].push(com.nomCom);
     });
 
-    const modeValue = getCachedSettingsSync().MODE ?? s.MODE;
-    const mode = (modeValue || "").toLowerCase() === "on" ? "PUBLIC" : "PRIVATE";
-
     moment.tz.setDefault("Africa/Nairobi");
-    const currentTime = moment().format("HH:mm:ss");
-    const currentDate = moment().format("DD/MM/YYYY");
+    const currentTime = moment().format('HH:mm:ss');
+    const currentDate = moment().format('DD/MM/YYYY');
 
-    const headerCard =
-      `╭──✦ *B.M.B-TECH* ✦──╮\n` +
-      `│\n` +
-      `│ ❖ Hello, *${nomAuteurMessage}*\n` +
-      `│ ❖ Platform : *${os.platform()}*\n` +
-      `│ ❖ Mode     : *${mode}*\n` +
-      `│ ❖ Prefix   : *[ ${prefixe} ]*\n` +
-      `│ ❖ Time     : *${currentTime}*\n` +
-      `│ ❖ Date     : *${currentDate}*\n` +
-      `│ ❖ Commands : *${cm.length}*\n` +
-      `│\n` +
-      `╰───────────────╯\n` +
-      `${readMore}\n`;
+    let infoMessage = `╭◈▬▬▬▬▬▬▬▬▬▬▬◈╮
+◈ BOT NAME: *B.M.B-TECH-V2*
+◈ COMMANDS: *${cm.length}+*
+◈ USER: *${nomAuteurMessage}*
+◈ PLATFORM: *${os.platform().toUpperCase()}*
+◈ OWNER: *B.M.B*
+◈ MODE: *${mode}*
+◈ PREFIX: *[ ${prefixe} ]*
+◈ TIME: *${currentTime}*
+◈ DATE: *${currentDate}*
+╰▬▬▬▬▬▬▬▬▬▬▬▬▬╯
+${readMore}\n`;
 
-    let menuBody = "";
+    let menuMessage = "";
+
     for (const category in commandsByCategory) {
-      menuBody += `\n『 *${category.toUpperCase()}* 』\n`;
-      menuBody += `┄┈┄┈┄┈┄┈┄┈┄┈┄┈┄┈┄┈\n`;
-      for (const cmdName of commandsByCategory[category]) {
-        menuBody += `  ‣ _${cmdName}_\n`;
-      }
-      menuBody += `┄┈┄┈┄┈┄┈┄┈┄┈┄┈┄┈┄┈\n`;
+        menuMessage += `\n╭◈──${category.toUpperCase()}──◈╮\n`;
+        for (const cmd of commandsByCategory[category]) {
+            menuMessage += `┊ • ${cmd}\n`;
+        }
+        menuMessage += `╰▬▬▬▬▬▬▬▬▬▬▬▬▬╯\n`;
     }
 
-    menuBody += `\n✦ ─────────────── ✦\n*B.M.B-TECH* — built to last`;
+    menuMessage += `\n✧ *𝙱.𝙼.𝙱-𝚇𝙼𝙳 - Bot Menu* ✧`;
 
-    const fullCaption = headerCard + menuBody;
-    const imageUrl = s.URL;
+    const imageUrl = "https://url.bmbxmd.workers.dev/menubmb.png";
 
     try {
-      await client.sendMessage(dest, {
-        image: { url: imageUrl },
-        caption: fullCaption,
-        ...newsletterContext
-      }, { quoted: quotedContact });
-    } catch (imgErr) {
-      console.log("[menu] image send failed, falling back to text:", imgErr.message || imgErr);
-      await client.sendMessage(dest, { text: fullCaption, ...newsletterContext }, { quoted: ms });
-    }
+        await client.sendMessage(dest, {
+            image: { url: imageUrl },
+            caption: infoMessage + menuMessage,
+            footer: "© 𝙱.𝙼.𝙱-𝚇𝙼𝙳",
+            ...newsletterContext
+        }, { quoted: quotedContact });
 
-  } catch (e) {
-    console.log("❌ Menu error: " + e);
-    repondre("❌ Menu error: " + (e.message || e));
-  }
+    } catch (e) {
+        console.log("❌ Menu error: " + e);
+        repondre("❌ Menu error: " + e.message);
+    }
 });
