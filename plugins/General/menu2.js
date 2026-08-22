@@ -1,10 +1,16 @@
-const fs = require('fs-extra');
-const path = require('path');
-const { bmbtz } = require(__dirname + "/../../devbmb/bmbtz");
+const { bmbtz, cm } = require("../../devbmb/bmbtz");
 const os = require("os");
 const moment = require("moment-timezone");
-const s = require(__dirname + "/../../settings");
+const s = require("../../settings");
+const { getCachedSettingsSync } = require("../../lib/settingsCache");
 
+/**
+ * menu
+ *
+ * Matches the reference layout structure from the screenshot:
+ * - Decorative header info card with * borders
+ * - One boxed section per category (category title + command list)
+ */
 const newsletterContext = {
   contextInfo: {
     forwardingScore: 999,
@@ -31,61 +37,67 @@ const quotedContact = {
   }
 };
 
-const more = String.fromCharCode(8206);
-const readMore = more.repeat(4001);
+const readMoreChar = String.fromCharCode(8206);
 
-bmbtz({ nomCom: "menu", categorie: "General" }, async (dest, client, commandOptions) => {
-    let { ms, repondre, prefixe, nomAuteurMessage } = commandOptions;
-    let { cm } = require(__dirname + "/../../devbmb/bmbtz");
-    let commandsByCategory = {};
-    let mode = (s.MODE.toLowerCase() === "yes") ? "PUBLIC" : "PRIVATE";
+bmbtz({ nomCom: "menu", alias: ["allmenu", "helplist"], categorie: "General" }, async (dest, client, commandOptions) => {
+  let { ms, repondre, prefixe, nomAuteurMessage, superUser } = commandOptions;
 
-    cm.map((com) => {
-        if (!commandsByCategory[com.categorie]) commandsByCategory[com.categorie] = [];
-        commandsByCategory[com.categorie].push(com.nomCom);
+  try {
+    const commandsByCategory = {};
+    cm.forEach((com) => {
+      const cat = com.categorie || "General";
+      if (!commandsByCategory[cat]) commandsByCategory[cat] = [];
+      commandsByCategory[cat].push(com.nomCom);
     });
 
-    moment.tz.setDefault("Africa/Nairobi");
-    const currentTime = moment().format('HH:mm:ss');
-    const currentDate = moment().format('DD/MM/YYYY');
+    const modeValue = getCachedSettingsSync().MODE ?? s.MODE;
+    const mode = (modeValue || "").toLowerCase() === "on" ? "PUBLIC" : "PRIVATE";
+    const ownerName = getCachedSettingsSync().OWNER_NAME ?? s.OWNER_NAME;
 
-    let infoMessage = `╭◈▬▬▬▬▬▬▬▬▬▬▬◈╮
-◈ BOT NAME: *BMB-TECH-V2*
-◈ COMMANDS: *${cm.length}+*
-◈ USER: *${nomAuteurMessage}*
-◈ PLATFORM: *${os.platform().toUpperCase()}*
-◈ OWNER: *B.M.B*
-◈ MODE: *${mode}*
-◈ PREFIX: *[ ${prefixe} ]*
-◈ TIME: *${currentTime}*
-◈ DATE: *${currentDate}*
-╰▬▬▬▬▬▬▬▬▬▬▬▬▬╯
-${readMore}\n`;
+    // Header card matching the reference style
+    let headerCard =
+      `*────────────────────*\n` +
+      `* BOT NAME: *${s.BOT}*\n` +
+      `* COMMANDS: *${cm.length}+*\n` +
+      `* DEV : *bmb tech*\n` +
+      `* PLATFORM: *${os.platform().toUpperCase()}*\n` +
+      `* OWNER : *${ownerName}*\n` +
+      `* MODE: *${mode}*\n` +
+      `*────────────────────*\n`;
 
-    let menuMessage = "";
-
+    let menuBody = "";
     for (const category in commandsByCategory) {
-        menuMessage += `\n╭◈──${category.toUpperCase()}──◈╮\n`;
-        for (const cmd of commandsByCategory[category]) {
-            menuMessage += `┊ • ${cmd}\n`;
-        }
-        menuMessage += `╰▬▬▬▬▬▬▬▬▬▬▬▬▬╯\n`;
+      // Category section header
+      menuBody += `\n*─── *${category.toUpperCase()}* ───*\n`;
+      menuBody += `*────────────────────*\n`;
+
+      // Commands list
+      for (const cmdName of commandsByCategory[category]) {
+        menuBody += `* ${cmdName.toUpperCase()}\n`;
+      }
+
+      // Category section footer
+      menuBody += `*────────────────────*\n`;
     }
 
-    menuMessage += `\n✧ *𝙱.𝙼.𝙱-𝚇𝙼𝙳 - Bot Menu* ✧`;
+    menuBody += `\n*B.M.B-TECH* — built to last`;
 
-    const imageUrl = "https://url.bmbxmd.workers.dev/menubmb.png";
+    const fullCaption = headerCard + menuBody;
+    const imageUrl = s.URL;
 
     try {
-        await client.sendMessage(dest, {
-            image: { url: imageUrl },
-            caption: infoMessage + menuMessage,
-            footer: "© 𝙱.𝙼.𝙱-𝚇𝙼𝙳",
-            ...newsletterContext
-        }, { quoted: quotedContact });
-
-    } catch (e) {
-        console.log("❌ Menu error: " + e);
-        repondre("❌ Menu error: " + e.message);
+      await client.sendMessage(dest, {
+        image: { url: imageUrl },
+        caption: fullCaption,
+        ...newsletterContext
+      }, { quoted: quotedContact });
+    } catch (imgErr) {
+      console.log("[menu] image send failed, falling back to text:", imgErr.message || imgErr);
+      await client.sendMessage(dest, { text: fullCaption, ...newsletterContext }, { quoted: ms });
     }
+
+  } catch (e) {
+    console.log("❌ Menu error: " + e);
+    repondre("❌ Menu error: " + (e.message || e));
+  }
 });
