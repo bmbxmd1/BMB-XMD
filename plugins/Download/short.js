@@ -36,7 +36,7 @@ bmbtz(
   {
     nomCom: "short",
     alias: ["tiny", "shorturl"],
-    categorie: "Sticker",
+    categorie: "Download",
     reaction: "General"
   },
   async (from, conn, context) => {
