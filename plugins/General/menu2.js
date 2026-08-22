@@ -7,6 +7,7 @@ const { getCachedSettingsSync } = require("../../lib/settingsCache");
 /**
  * menu
  * Exact match to the screenshot using ┇ * ✾ ┋ decorations
+ * Commands & categories in lowercase
  */
 const newsletterContext = {
   contextInfo: {
@@ -51,30 +52,30 @@ bmbtz({ nomCom: "menu", alias: ["allmenu", "helplist"], categorie: "General" }, 
     const mode = (modeValue || "").toLowerCase() === "on" ? "PUBLIC" : "PRIVATE";
     const ownerName = getCachedSettingsSync().OWNER_NAME ?? s.OWNER_NAME;
 
-    // ===== HEADER (style from image) =====
+    // ===== HEADER =====
     let headerCard =
-      `┇*✾═══════════════✾*┋\n` +
+      `┇✾═══════════════✾\n` +
       `┇ BOT NAME: *${s.BOT}*\n` +
       `┇ COMMANDS: *${cm.length}+*\n` +
       `┇ DEV : *bmb tech*\n` +
       `┇ PLATFORM: *${os.platform().toUpperCase()}*\n` +
       `┇ OWNER : *${ownerName}*\n` +
       `┇ MODE: *${mode}*\n` +
-      `┇*✾═══════════════✾*┋\n`;
+      `┇✾═══════════════✾\n`;
 
     let menuBody = "";
     for (const category in commandsByCategory) {
-      // ===== CATEGORY HEADER =====
-      menuBody += `\n┇*✾ ${category.toUpperCase()} ✾*┋\n`;
-      menuBody += `┇*✾═══════════════✾*┋\n`;
+      // ===== CATEGORY HEADER (lowercase) =====
+      menuBody += `\n✾ ${category} ✾\n`;
+      menuBody += `┇✾═══════════════✾*┋\n`;
 
-      // ===== COMMANDS =====
+      // ===== COMMANDS (lowercase) =====
       for (const cmdName of commandsByCategory[category]) {
-        menuBody += `┇ *${cmdName.toUpperCase()}*\n`;
+        menuBody += `┇ *${cmdName}*\n`;
       }
 
       // ===== CATEGORY FOOTER =====
-      menuBody += `┇*✾═══════════════✾*┋\n`;
+      menuBody += `┇✾═══════════════✾\n`;
     }
 
     menuBody += `\n*B.M.B-TECH* — built to last`;
