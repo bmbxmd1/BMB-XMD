@@ -67,7 +67,7 @@ bmbtz({ nomCom: "menu", alias: ["allmenu", "helplist"], categorie: "General" }, 
     for (const category in commandsByCategory) {
       // ===== CATEGORY HEADER (lowercase) =====
       menuBody += `\n✾ ${category} ✾\n`;
-      menuBody += `┇✾═══════════════✾*┋\n`;
+      menuBody += `┇✾═══════════════✾\n`;
 
       // ===== COMMANDS (lowercase) =====
       for (const cmdName of commandsByCategory[category]) {
