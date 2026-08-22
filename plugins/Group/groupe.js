@@ -85,7 +85,7 @@ bmbtz({ nomCom: "link", categorie: 'Group', reaction: "🙋" }, async (dest, cli
 │
 │ 👉 ${lien}
 │
-│ © BMB-TECH 𝐬𝐜𝐢𝐞𝐧𝐜𝐞
+│ © B.M.B-TECH 𝐬𝐜𝐢𝐞𝐧𝐜𝐞
 ╰────────────────────────────╯`;
 
   repondre(mess);
@@ -412,18 +412,9 @@ Type:
   }
 });
 
-bmbtz({ nomCom: "left", categorie: "Mods" }, async (dest, client, commandeOptions) => {
-
-  const { repondre, verifGroupe, superUser } = commandeOptions;
-  if (!verifGroupe) { repondre("order reserved for group only"); return };
-  if (!superUser) {
-    repondre("command reserved for the bot owner");
-    return;
-  }
-  await repondre('sayonnara') ;
-   
-  client.groupLeave(dest)
-});
+// "left" command moved to its own file: plugins/Mods/left.js
+// (was duplicated here and in mods.js — only one ever ran; consolidated
+// there since that's the version being split out with fixes/aliases.)
 
 bmbtz({ nomCom: "gname", categorie: 'Group' }, async (dest, client, commandeOptions) => {
   const { arg, repondre, verifAdmin } = commandeOptions;
