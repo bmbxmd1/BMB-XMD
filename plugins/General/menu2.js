@@ -50,7 +50,7 @@ bmbtz({ nomCom: "menu", categorie: "General" }, async (dest, client, commandOpti
     const currentDate = moment().format('DD/MM/YYYY');
 
     let infoMessage = `╭◈▬▬▬▬▬▬▬▬▬▬▬◈╮
-◈ BOT NAME: *B.M.B-TECH-V2*
+◈ BOT NAME: *BMB-TECH-V2*
 ◈ COMMANDS: *${cm.length}+*
 ◈ USER: *${nomAuteurMessage}*
 ◈ PLATFORM: *${os.platform().toUpperCase()}*

@@ -61,7 +61,7 @@ function getBotInfo(mode, totalCommands) {
   const totalRAM = format(os.totalmem());
 
   return `
-╭───「 *B.M.B-TECH* 」─────⊛
+╭───「 *BMB-TECH* 」─────⊛
 ┃⊛╭───────────────⊛
 ┃⊛│☢️ *Mode*: ${mode.toUpperCase()}
 ┃⊛│🖥️ *RAM*: ${usedRAM} / ${totalRAM}

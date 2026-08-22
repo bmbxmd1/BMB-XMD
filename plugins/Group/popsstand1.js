@@ -76,18 +76,18 @@ bmbtz({
 
     for (let member of participants) {
       let number = member.id.split('@')[0];
-      let name = member.name || member.notify || `[B.M.B-TECH] +${number}`;
+      let name = member.name || member.notify || `[BMB-TECH] +${number}`;
       vcardData += `BEGIN:VCARD\nVERSION:3.0\nFN:${name}\nTEL;type=CELL;type=VOICE;waid=${number}:+${number}\nEND:VCARD\n`;
     }
 
-    repondre(`A moment, *B.M.B-TECH* is compiling ${participants.length} contacts into a vcf...`);
+    repondre(`A moment, *BMB-TECH* is compiling ${participants.length} contacts into a vcf...`);
     fs.writeFileSync("./contacts.vcf", vcardData.trim());
 
     await sock.sendMessage(jid, {
       document: fs.readFileSync("./contacts.vcf"),
       mimetype: "text/vcard",
       fileName: `${metadata.subject}.vcf`,
-      caption: `VCF for ${metadata.subject}\nTotal Contacts: ${participants.length}\n*THANKS FOR USING B.M.B-TECH*`
+      caption: `VCF for ${metadata.subject}\nTotal Contacts: ${participants.length}\n*THANKS FOR USING BMB-TECH*`
     }, { ephemeralExpiration: 86400, quoted: ms });
 
     fs.unlinkSync('./contacts.vcf');

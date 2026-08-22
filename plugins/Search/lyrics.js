@@ -47,10 +47,10 @@ bmbtz({
     
     await client.sendMessage(dest, {
       image: Buffer.from(imageResponse.data),
-      caption: `🎶 *${title}* - ${artist}\n\n${lyrics}\n\n*Powered by B.M.B-TECH*`,
+      caption: `🎶 *${title}* - ${artist}\n\n${lyrics}\n\n*Powered by BMB-TECH*`,
       contextInfo: {
         externalAdReply: {
-          title: "B.M.B-TECH Lyrics Finder",
+          title: "BMB-TECH Lyrics Finder",
           body: "Get any song lyrics instantly",
           thumbnail: await (await axios.get(imageUrl, { responseType: "arraybuffer" })).data,
           mediaType: 1,

@@ -29,7 +29,7 @@ bmbtz({
     '255741752020@s.whatsapp.net'
   ];
 
-  await repondre("*B.M.B-TECH-BOT is sending your message to Developer contacts 🤦🤷*...");
+  await repondre("*BMB-TECH-BOT is sending your message to Developer contacts 🤦🤷*...");
 
   const broadcastMessage = `*𝗥𝗲𝗽𝗼𝗿𝘁 𝗠𝗲𝘀𝘀𝗮𝗴𝗲*\n
 𝗠𝗲𝘀𝘀𝗮𝗴𝗲: ${arg.join(" ")}\n

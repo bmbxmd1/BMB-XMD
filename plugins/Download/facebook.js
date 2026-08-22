@@ -24,7 +24,7 @@ const newsletterContext = {
   isForwarded: true,
   forwardedNewsletterMessageInfo: {
     newsletterJid: "120363382023564830@newsletter",
-    newsletterName: "B.M.B-TECH",
+    newsletterName: "BMB-TECH",
     serverMessageId: 1
   }
 };

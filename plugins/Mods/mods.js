@@ -295,7 +295,7 @@ bmbtz({ nomCom: "save", categorie: "Mods" }, async (dest, client, commandeOption
           let media  = await client.downloadAndSaveMediaMessage(msgRepondu.stickerMessage, '', true, 'sticker')
   
           let stickerMess = new Sticker(media, {
-            pack: 'B.M.B-TECH',
+            pack: 'BMB-TECH',
             type: StickerTypes.CROPPED,
             categories: ["🤩", "🎉"],
             id: "12345",

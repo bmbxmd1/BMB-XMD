@@ -2,7 +2,7 @@ const { bmbtz } = require("../../devbmb/bmbtz");
 const axios = require('axios');
 const yts = require('yt-search');
 
-const BOT_NAME = 'B.M.B-TECH'; // Change as you want
+const BOT_NAME = 'BMB-TECH'; // Change as you want
 const NEWSLETTER_JID = '120363382023564830@newsletter';
 const NEWSLETTER_NAME = 'Bmb Tech Info';
 

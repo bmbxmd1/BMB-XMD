@@ -85,7 +85,7 @@ bmbtz({ nomCom: "link", categorie: 'Group', reaction: "🙋" }, async (dest, cli
 │
 │ 👉 ${lien}
 │
-│ © B.M.B-TECH 𝐬𝐜𝐢𝐞𝐧𝐜𝐞
+│ © BMB-TECH 𝐬𝐜𝐢𝐞𝐧𝐜𝐞
 ╰────────────────────────────╯`;
 
   repondre(mess);

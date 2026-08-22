@@ -177,7 +177,7 @@ bmbtz({
 
         if (inviteCode) {
             await client.sendMessage(jid, {
-                text: `You have been invited to join the group *${groupMetadata.subject}*:\n\nhttps://chat.whatsapp.com/${inviteCode}\n\n*POWERED BY B.M.B-TECH*`,
+                text: `You have been invited to join the group *${groupMetadata.subject}*:\n\nhttps://chat.whatsapp.com/${inviteCode}\n\n*POWERED BY BMB-TECH*`,
             }).catch(() => {});
         }
     }

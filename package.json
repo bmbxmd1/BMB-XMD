@@ -17,7 +17,7 @@
     "bmb-xmd",
     "bmb-tech-Whatsapp-bot"
   ],
-  "author": "B.M.B-TECH",
+  "author": "BMB-TECH",
   "license": "ISC",
   "dependencies": {
     "@whiskeysockets/baileys": "npm:bmbtech-baileys@latest",

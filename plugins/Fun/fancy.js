@@ -44,7 +44,7 @@ bmbtz(
           {
             text:
               `Example:\n${prefixe}fancy 10 bmb tech\n\n` +
-              fancy.list("B.M.B-TECH", fancy)
+              fancy.list("BMB-TECH", fancy)
           },
           { quoted: quotedContact }
         );

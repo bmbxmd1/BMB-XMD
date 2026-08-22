@@ -115,7 +115,7 @@ bmbtz({
 🔑 *ID:* ${shortId}
 🌐 *Link:* ${mediaUrl}
 ━━━━━━━━━━━━━━━━
-© B.M.B-TECH`;
+© BMB-TECH`;
 
     // Create buttons
     const buttons = [
@@ -142,7 +142,7 @@ bmbtz({
                 text: textMessage
               }),
               footer: proto.Message.InteractiveMessage.Footer.create({
-                text: "© B.M.B-TECH"
+                text: "© BMB-TECH"
               }),
               header: proto.Message.InteractiveMessage.Header.create({
                 title: "",

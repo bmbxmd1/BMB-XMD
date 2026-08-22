@@ -749,7 +749,7 @@ client.ev.on("messages.upsert", async (m) => {
 
             const dev = (DEV_NUMBER + "@s.whatsapp.net") === auteurMessage;
             function repondre(mes) { client.sendMessage(origineMessage, { text: mes }, { quoted: ms }); }
-            console.log("\t🌍B.M.B-TECH ONLINE🌍");
+            console.log("\t🌍BMB-TECH ONLINE🌍");
             console.log("=========== incoming message ===========");
             if (verifGroupe) {
                 console.log("message from group: " + nomGroupe);

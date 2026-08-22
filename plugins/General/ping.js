@@ -42,7 +42,7 @@ bmbtz({
           serverMessageId: 143
         },
         externalAdReply: {
-          title: "⚡ B.M.B-TECH SYSTEM STATUS",
+          title: "⚡ BMB-TECH SYSTEM STATUS",
           body: "Bot is running smoothly 🚀",
           thumbnailUrl: conf.URL,
           sourceUrl: conf.URL,
