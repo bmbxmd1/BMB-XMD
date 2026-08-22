@@ -27,10 +27,14 @@ bmbtz(
   },
 
   async (dest, client, commandeOptions) => {
-    const { arg, repondre, superUser, prefixe } = commandeOptions;
+    const { arg, repondre, superUser, verifAdmin, verifGroupe, prefixe } = commandeOptions;
     const limit = conf.BOOM_MESSAGE_LIMIT || 20;
 
-    if (!superUser) {
+    // Allowed for the bot owner/sudo (superUser) anywhere, or for group
+    // admins inside their own group (verifAdmin is only meaningful
+    // within a group — verifGroupe guards against it accidentally
+    // applying outside one).
+    if (!(superUser || (verifGroupe && verifAdmin))) {
       repondre('You are not authorised to use this command !!!');
       return;
     }
