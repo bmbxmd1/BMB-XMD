@@ -6,10 +6,7 @@ const { getCachedSettingsSync } = require("../../lib/settingsCache");
 
 /**
  * menu
- *
- * Matches the reference layout structure from the screenshot:
- * - Decorative header info card with * borders
- * - One boxed section per category (category title + command list)
+ * Exact match to the screenshot using ┇ * ✾ ┋ decorations
  */
 const newsletterContext = {
   contextInfo: {
@@ -54,30 +51,30 @@ bmbtz({ nomCom: "menu", alias: ["allmenu", "helplist"], categorie: "General" }, 
     const mode = (modeValue || "").toLowerCase() === "on" ? "PUBLIC" : "PRIVATE";
     const ownerName = getCachedSettingsSync().OWNER_NAME ?? s.OWNER_NAME;
 
-    // Header card matching the reference style
+    // ===== HEADER (style from image) =====
     let headerCard =
-      `*────────────────────*\n` +
-      `* BOT NAME: *${s.BOT}*\n` +
-      `* COMMANDS: *${cm.length}+*\n` +
-      `* DEV : *bmb tech*\n` +
-      `* PLATFORM: *${os.platform().toUpperCase()}*\n` +
-      `* OWNER : *${ownerName}*\n` +
-      `* MODE: *${mode}*\n` +
-      `*────────────────────*\n`;
+      `┇*✾═══════════════✾*┋\n` +
+      `┇ BOT NAME: *${s.BOT}*\n` +
+      `┇ COMMANDS: *${cm.length}+*\n` +
+      `┇ DEV : *bmb tech*\n` +
+      `┇ PLATFORM: *${os.platform().toUpperCase()}*\n` +
+      `┇ OWNER : *${ownerName}*\n` +
+      `┇ MODE: *${mode}*\n` +
+      `┇*✾═══════════════✾*┋\n`;
 
     let menuBody = "";
     for (const category in commandsByCategory) {
-      // Category section header
-      menuBody += `\n*─── *${category.toUpperCase()}* ───*\n`;
-      menuBody += `*────────────────────*\n`;
+      // ===== CATEGORY HEADER =====
+      menuBody += `\n┇*✾ ${category.toUpperCase()} ✾*┋\n`;
+      menuBody += `┇*✾═══════════════✾*┋\n`;
 
-      // Commands list
+      // ===== COMMANDS =====
       for (const cmdName of commandsByCategory[category]) {
-        menuBody += `* ${cmdName.toUpperCase()}\n`;
+        menuBody += `┇ *${cmdName.toUpperCase()}*\n`;
       }
 
-      // Category section footer
-      menuBody += `*────────────────────*\n`;
+      // ===== CATEGORY FOOTER =====
+      menuBody += `┇*✾═══════════════✾*┋\n`;
     }
 
     menuBody += `\n*B.M.B-TECH* — built to last`;
