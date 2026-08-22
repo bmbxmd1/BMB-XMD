@@ -7,22 +7,11 @@ const { getCachedSettingsSync } = require("../../lib/settingsCache");
 /**
  * menu
  *
- * Rewritten from a template the user provided. Fixes two real bugs
- * found in it along the way:
- *   - `s.MODE.toLowerCase() === "yes"` checked against a value MODE
- *     never actually holds (it's "on"/"off", set via .mode public/
- *     .mode private) — Mode would always display PRIVATE regardless
- *     of the real setting. Now reads the live value via
- *     getCachedSettingsSync(), matching how plugins/Settings/settings.js
- *     itself reads current settings.
- *   - The image URL pointed at url.bmbxmd.workers.dev, the same dead
- *     image host that broke .ping earlier in this project — replaced
- *     with the project's own configured menu image (conf.URL), with a
- *     plain-text fallback if sending the image fails for any reason.
- *
- * Visual style is intentionally its own design (different border/bullet
- * glyphs, different layout details) rather than a copy of any specific
- * reference menu someone might recognize.
+ * Second visual pass — gives each category its own boxed "card"
+ * (open decorative line → italicized command list → close line),
+ * matching the polished, structured feel of the reference layout the
+ * user liked, while using an entirely different glyph set/border
+ * style so it doesn't read as a literal copy.
  */
 const newsletterContext = {
   contextInfo: {
@@ -50,9 +39,6 @@ const quotedContact = {
   }
 };
 
-// WhatsApp "Read more" trick — an invisible character repeated many
-// times pushes the rest of the caption behind an expandable link,
-// keeping the initial view short.
 const readMoreChar = String.fromCharCode(8206);
 const readMore = readMoreChar.repeat(4001);
 
@@ -74,29 +60,33 @@ bmbtz({ nomCom: "menu", alias: ["allmenu", "helplist"], categorie: "General" }, 
     const currentTime = moment().format("HH:mm:ss");
     const currentDate = moment().format("DD/MM/YYYY");
 
-    let infoMessage = `┏─⦿ *B.M.B-TECH* ⦿─┓\n` +
-      `┆ Hey there, *${nomAuteurMessage}* 👋\n` +
-      `┆\n` +
-      `┆ ▸ Platform : *${os.platform()}*\n` +
-      `┆ ▸ Mode     : *${mode}*\n` +
-      `┆ ▸ Prefix   : *[ ${prefixe} ]*\n` +
-      `┆ ▸ Time     : *${currentTime}*\n` +
-      `┆ ▸ Date     : *${currentDate}*\n` +
-      `┆ ▸ Commands : *${cm.length}*\n` +
-      `┗━━━━━━━━━━━━━━━━━┛\n` +
+    const headerCard =
+      `╭──✦ *B.M.B-TECH* ✦──╮\n` +
+      `│\n` +
+      `│ ❖ Hello, *${nomAuteurMessage}*\n` +
+      `│ ❖ Platform : *${os.platform()}*\n` +
+      `│ ❖ Mode     : *${mode}*\n` +
+      `│ ❖ Prefix   : *[ ${prefixe} ]*\n` +
+      `│ ❖ Time     : *${currentTime}*\n` +
+      `│ ❖ Date     : *${currentDate}*\n` +
+      `│ ❖ Commands : *${cm.length}*\n` +
+      `│\n` +
+      `╰───────────────╯\n` +
       `${readMore}\n`;
 
-    let menuMessage = "";
+    let menuBody = "";
     for (const category in commandsByCategory) {
-      menuMessage += `\n▞▚ *${category.toUpperCase()}* ▚▞\n`;
+      menuBody += `\n『 *${category.toUpperCase()}* 』\n`;
+      menuBody += `┄┈┄┈┄┈┄┈┄┈┄┈┄┈┄┈┄┈\n`;
       for (const cmdName of commandsByCategory[category]) {
-        menuMessage += `   ➛ ${cmdName}\n`;
+        menuBody += `  ‣ _${cmdName}_\n`;
       }
+      menuBody += `┄┈┄┈┄┈┄┈┄┈┄┈┄┈┄┈┄┈\n`;
     }
 
-    menuMessage += `\n─────────────\n✦ *B.M.B-TECH* — built to last ✦`;
+    menuBody += `\n✦ ─────────────── ✦\n*B.M.B-TECH* — built to last`;
 
-    const fullCaption = infoMessage + menuMessage;
+    const fullCaption = headerCard + menuBody;
     const imageUrl = s.URL;
 
     try {
