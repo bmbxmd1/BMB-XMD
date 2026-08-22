@@ -1,10 +1,29 @@
-const fs = require('fs-extra');
-const path = require('path');
-const { bmbtz } = require(__dirname + "/../../devbmb/bmbtz");
+const { bmbtz, cm } = require("../../devbmb/bmbtz");
 const os = require("os");
 const moment = require("moment-timezone");
-const s = require(__dirname + "/../../settings");
+const s = require("../../settings");
+const { getCachedSettingsSync } = require("../../lib/settingsCache");
 
+/**
+ * menu
+ *
+ * Rewritten from a template the user provided. Fixes two real bugs
+ * found in it along the way:
+ *   - `s.MODE.toLowerCase() === "yes"` checked against a value MODE
+ *     never actually holds (it's "on"/"off", set via .mode public/
+ *     .mode private) — Mode would always display PRIVATE regardless
+ *     of the real setting. Now reads the live value via
+ *     getCachedSettingsSync(), matching how plugins/Settings/settings.js
+ *     itself reads current settings.
+ *   - The image URL pointed at url.bmbxmd.workers.dev, the same dead
+ *     image host that broke .ping earlier in this project — replaced
+ *     with the project's own configured menu image (conf.URL), with a
+ *     plain-text fallback if sending the image fails for any reason.
+ *
+ * Visual style is intentionally its own design (different border/bullet
+ * glyphs, different layout details) rather than a copy of any specific
+ * reference menu someone might recognize.
+ */
 const newsletterContext = {
   contextInfo: {
     forwardingScore: 999,
@@ -31,65 +50,68 @@ const quotedContact = {
   }
 };
 
-const more = String.fromCharCode(8206);
-const readMore = more.repeat(4001);
+// WhatsApp "Read more" trick — an invisible character repeated many
+// times pushes the rest of the caption behind an expandable link,
+// keeping the initial view short.
+const readMoreChar = String.fromCharCode(8206);
+const readMore = readMoreChar.repeat(4001);
 
-bmbtz({ nomCom: "menu", categorie: "General" }, async (dest, client, commandOptions) => {
-    let { ms, repondre, prefixe, nomAuteurMessage } = commandOptions;
-    let { cm } = require(__dirname + "/../../devbmb/bmbtz");
-    let commandsByCategory = {};
-    let mode = (s.MODE.toLowerCase() === "yes") ? "PUBLIC" : "PRIVATE";
+bmbtz({ nomCom: "menu", alias: ["allmenu", "helplist"], categorie: "General" }, async (dest, client, commandOptions) => {
+  let { ms, repondre, prefixe, nomAuteurMessage } = commandOptions;
 
-    cm.map((com) => {
-        if (!commandsByCategory[com.categorie]) commandsByCategory[com.categorie] = [];
-        commandsByCategory[com.categorie].push(com.nomCom);
+  try {
+    const commandsByCategory = {};
+    cm.forEach((com) => {
+      const cat = com.categorie || "General";
+      if (!commandsByCategory[cat]) commandsByCategory[cat] = [];
+      commandsByCategory[cat].push(com.nomCom);
     });
 
-    moment.tz.setDefault("Africa/Nairobi");
-    const currentTime = moment().format('HH:mm:ss');
-    const currentDate = moment().format('DD/MM/YYYY');
+    const modeValue = getCachedSettingsSync().MODE ?? s.MODE;
+    const mode = (modeValue || "").toLowerCase() === "on" ? "PUBLIC" : "PRIVATE";
 
-    let infoMessage = `┏━━━⚡ *B.M.B-TECH-V2* ⚡━━━┓
-┃ 🔥  Hello, *${nomAuteurMessage}*! 🔥
-┣━━━━━━━━━━━━━━━━━━━━━
-┃ 📌 *System Info:*
-┃ 💻 Platform: *${os.platform()}*
-┣━━━━━━━━━━━━━━━━━━━━━
-┃ ⚙️ *Bot Status:*
-┃ 🔘 Mode: *${mode}*
-┃ 🚀 Prefix: *[ ${prefixe} ]*
-┃ ⏳ Time: *${currentTime}*
-┃ 📆 Date: *${currentDate}*
-┃ 📟 Commands: *${cm.length}*
-┣━━━━━━━━━━━━━━━━━━━━━
-┃ ${readMore}
-┃ 🎩 *Command Menu* 🎩
-┣━━━━━━━━━━━━━━━━━━━━━\n`;
+    moment.tz.setDefault("Africa/Nairobi");
+    const currentTime = moment().format("HH:mm:ss");
+    const currentDate = moment().format("DD/MM/YYYY");
+
+    let infoMessage = `┏─⦿ *B.M.B-TECH* ⦿─┓\n` +
+      `┆ Hey there, *${nomAuteurMessage}* 👋\n` +
+      `┆\n` +
+      `┆ ▸ Platform : *${os.platform()}*\n` +
+      `┆ ▸ Mode     : *${mode}*\n` +
+      `┆ ▸ Prefix   : *[ ${prefixe} ]*\n` +
+      `┆ ▸ Time     : *${currentTime}*\n` +
+      `┆ ▸ Date     : *${currentDate}*\n` +
+      `┆ ▸ Commands : *${cm.length}*\n` +
+      `┗━━━━━━━━━━━━━━━━━┛\n` +
+      `${readMore}\n`;
 
     let menuMessage = "";
-
     for (const category in commandsByCategory) {
-        menuMessage += `┣ 🔹 *${category.toUpperCase()}* 🔹\n`;
-        for (const cmd of commandsByCategory[category]) {
-            menuMessage += `┃   🔸 ${cmd}\n`;
-        }
-        menuMessage += `┣━━━━━━━━━━━━━━━━━━━━━\n`;
+      menuMessage += `\n▞▚ *${category.toUpperCase()}* ▚▞\n`;
+      for (const cmdName of commandsByCategory[category]) {
+        menuMessage += `   ➛ ${cmdName}\n`;
+      }
     }
 
-    menuMessage += `┗🌟 *𝙱.𝙼.𝙱-𝚇𝙼𝙳 - Developed by the Best!* 🌟`;
+    menuMessage += `\n─────────────\n✦ *B.M.B-TECH* — built to last ✦`;
 
-    const imageUrl = "https://url.bmbxmd.workers.dev/menubmb.png";
+    const fullCaption = infoMessage + menuMessage;
+    const imageUrl = s.URL;
 
     try {
-        await client.sendMessage(dest, {
-            image: { url: imageUrl },
-            caption: infoMessage + menuMessage,
-            footer: "© 𝙱.𝙼.𝙱-𝚇𝙼𝙳",
-            ...newsletterContext
-        }, { quoted: quotedContact });
-
-    } catch (e) {
-        console.log("❌ Menu error: " + e);
-        repondre("❌ Menu error: " + e.message);
+      await client.sendMessage(dest, {
+        image: { url: imageUrl },
+        caption: fullCaption,
+        ...newsletterContext
+      }, { quoted: quotedContact });
+    } catch (imgErr) {
+      console.log("[menu] image send failed, falling back to text:", imgErr.message || imgErr);
+      await client.sendMessage(dest, { text: fullCaption, ...newsletterContext }, { quoted: ms });
     }
+
+  } catch (e) {
+    console.log("❌ Menu error: " + e);
+    repondre("❌ Menu error: " + (e.message || e));
+  }
 });
