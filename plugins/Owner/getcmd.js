@@ -45,13 +45,17 @@ bmbtz({
     categorie: "Owner",
     reaction: "🔍",
 }, async (dest, client, commandeOptions) => {
-    const { ms, repondre, dev, arg, prefixe } = commandeOptions;
+    const { ms, repondre, dev, superUser, arg, prefixe } = commandeOptions;
 
     await client.sendMessage(dest, { react: { text: "🔍", key: ms.key } }).catch(() => {});
 
-    if (!dev) {
+    // Originally dev-only (matching NOVA-XMD's hardcoded DEVELOPER
+    // restriction), but this is the bot's own owner/deployer asking to
+    // see their own bot's source — reasonable to allow, so superUser
+    // (owner/sudo) is granted access too, not just the fixed DEV_NUMBER.
+    if (!(dev || superUser)) {
         await client.sendMessage(dest, { react: { text: "❌", key: ms.key } }).catch(() => {});
-        return repondre(`🚫 *ACCESS DENIED*\n━━━━━━━━━━━━━━━━\nThis command is restricted to the bot developer.\n━━━━━━━━━━━━━━━━\n© bmb tech`);
+        return repondre(`🚫 *ACCESS DENIED*\n━━━━━━━━━━━━━━━━\nThis command is restricted to the bot owner/developer.\n━━━━━━━━━━━━━━━━\n© bmb tech`);
     }
 
     const categories = listCategories();
