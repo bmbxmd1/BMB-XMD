@@ -3,9 +3,10 @@ const { bmbtz } = require('../../devbmb/bmbtz');
 /**
  * join
  *
- * Split out of the old combined mods.js. Added a check for a missing
- * `arg[0]` — the previous version called `.split(...)` on it directly,
- * which would throw if no link was provided at all.
+ * Enhanced error reporting: the previous catch block just said
+ * "Unknown error" for every failure, which hid the actual reason
+ * (expired/invalid link, already a member, group full, revoked
+ * invite, etc). Now logs and surfaces the real WhatsApp error detail.
  */
 bmbtz({
     nomCom: "join",
@@ -30,6 +31,13 @@ bmbtz({
         await client.groupAcceptInvite(result);
         repondre(`Succes`);
     } catch (e) {
-        repondre('Unknown error');
+        console.log('[join] groupAcceptInvite failed:', e?.message || e);
+        const statusCode = e?.output?.statusCode;
+        let reason = 'Unknown error.';
+        if (statusCode === 401 || statusCode === 403) reason = 'This invite link is no longer valid, or I was removed/banned from this group before.';
+        else if (statusCode === 404) reason = 'This invite link is invalid or has expired.';
+        else if (statusCode === 409) reason = 'I am already a member of this group.';
+        else if (e?.message) reason = e.message;
+        repondre(`Failed to join: ${reason}`);
     }
 });
