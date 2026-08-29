@@ -79,6 +79,7 @@ const _GS_DEFAULTS = {
     antispam: 'off',
     antibot: 'off',
     antibot_action: 'remove',
+    antistatusmention: 'off',
 };
 
 function _getGroupRowJson(jid) {
@@ -105,7 +106,8 @@ const PG_SCHEMA = [
         welcome TEXT DEFAULT 'off', goodbye TEXT DEFAULT 'off', warn_limit INTEGER DEFAULT 3,
         custom_welcome TEXT DEFAULT '', custom_goodbye TEXT DEFAULT '',
         antisticker TEXT DEFAULT 'off',
-        antispam TEXT DEFAULT 'off', antibot TEXT DEFAULT 'off', antibot_action TEXT DEFAULT 'remove'
+        antispam TEXT DEFAULT 'off', antibot TEXT DEFAULT 'off', antibot_action TEXT DEFAULT 'remove',
+        antistatusmention TEXT DEFAULT 'off'
     )`,
     `CREATE TABLE IF NOT EXISTS sudo_users (num TEXT PRIMARY KEY)`,
     `CREATE TABLE IF NOT EXISTS banned_users (num TEXT PRIMARY KEY)`,
