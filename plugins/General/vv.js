@@ -3,10 +3,10 @@ let { Sticker, StickerTypes } = require('wa-sticker-formatter');
 
 bmbtz({
     nomCom: "vv",
-    alias: ["watch", "keep", "grab"],
+    alias: ["view", "keep", "grab"],
     categorie: "General"
 }, async (dest, client, commandeOptions) => {
-    const { repondre, msgRepondu, superUser, auteurMessage } = commandeOptions;
+    const { repondre, msgRepondu, superUser } = commandeOptions;
 
     // Check kama ni superUser
     if (!superUser) {
@@ -28,6 +28,21 @@ bmbtz({
             newsletterJid: "120363382023564830@newsletter",
             newsletterName: "𝙱.𝙼.𝙱-𝚇𝙼𝙳",
             serverMessageId: 1
+        }
+    };
+
+    // quoted contact kama ile ya awali
+    const quotedContact = {
+        key: {
+            fromMe: false,
+            participant: `0@s.whatsapp.net`,
+            remoteJid: "status@broadcast"
+        },
+        message: {
+            contactMessage: {
+                displayName: "B.M.B VERIFIED ✅",
+                vcard: "BEGIN:VCARD\nVERSION:3.0\nFN:B.M.B VERIFIED ✅\nORG:BMB-TECH BOT;\nTEL;type=CELL;type=VOICE;waid=255767862457:+255767862457\nEND:VCARD"
+            }
         }
     };
 
@@ -82,10 +97,9 @@ bmbtz({
             };
         }
 
-        // Tuma kwa mtu aliyeomba
-        await client.sendMessage(auteurMessage, msg);
+        // Tuma hapo hapo kwenye dest (group au chat) kama vv ya awali
+        await client.sendMessage(dest, msg, { quoted: quotedContact });
         
-        // Onyesha success message
         await repondre('✅ Message saved successfully!');
 
     } catch (error) {
